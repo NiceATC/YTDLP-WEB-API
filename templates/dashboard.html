@@ -73,12 +73,12 @@
     <div id="player-modal" class="modal fixed inset-0 bg-black/80 items-center justify-center z-50">
         <div class="glass-effect rounded-xl shadow-2xl w-full max-w-4xl">
             <div class="flex justify-between items-center p-6 border-b border-gray-600">
-                <h3 class="text-xl font-bold text-cyan-300">Player de Mídia</h3>
+                <h3 class="text-xl font-bold text-cyan-300">Player de Midia</h3>
                 <button class="close-modal-btn text-gray-400 hover:text-white text-2xl">&times;</button>
             </div>
             <div class="p-6">
                 <div id="player-content" class="player-container rounded-lg p-6">
-                    <!-- Player será inserido aqui dinamicamente -->
+                    <!-- Player sera inserido aqui dinamicamente -->
                 </div>
             </div>
         </div>
@@ -87,8 +87,8 @@
     {% if force_change %}
         <div class="flex items-center justify-center min-h-screen">
             <div class="w-full max-w-md glass-effect rounded-xl shadow-2xl p-8">
-                <h1 class="text-3xl font-bold text-center text-cyan-400 mb-2">Alteração Obrigatória</h1>
-                <p class="text-center text-gray-400 mb-6">Por segurança, altere a senha padrão.</p>
+                <h1 class="text-3xl font-bold text-center text-cyan-400 mb-2">Alteracao Obrigatoria</h1>
+                <p class="text-center text-gray-400 mb-6">Por seguranca, altere a senha padrao.</p>
                 <form action="{{ url_for('change_password') }}" method="POST" class="space-y-6">
                     <div>
                         <label for="new_password" class="block text-sm font-medium text-gray-400">Nova Senha</label>
@@ -114,7 +114,7 @@
                         </a>
                         <a href="#history" class="sidebar-link p-3 rounded-lg text-gray-300">
                             <i class="fa-solid fa-clock-rotate-left w-6 text-center"></i>
-                            <span>Histórico</span>
+                            <span>Historico</span>
                         </a>
                         <a href="#files" class="sidebar-link p-3 rounded-lg text-gray-300">
                             <i class="fa-solid fa-folder-open w-6 text-center"></i>
@@ -122,7 +122,7 @@
                         </a>
                         <a href="#settings" class="sidebar-link p-3 rounded-lg text-gray-300">
                             <i class="fa-solid fa-gear w-6 text-center"></i>
-                            <span>Configurações</span>
+                            <span>Configuracoes</span>
                         </a>
                     </nav>
                 </div>
@@ -136,7 +136,7 @@
                 <section id="tester" class="content-section">
                     <div class="mb-8">
                         <h2 class="text-4xl font-bold text-cyan-300 mb-2">Testar API</h2>
-                        <p class="text-gray-400">Teste a funcionalidade da API de download de mídia</p>
+                        <p class="text-gray-400">Teste a funcionalidade da API de download de midia</p>
                     </div>
                     
                     <!-- Status dos Cookies -->
@@ -151,14 +151,14 @@
                                         <i class="fas fa-check-circle mr-1"></i>Cookies Carregados
                                     </span>
                                     <span class="text-sm text-gray-400">
-                                        Arquivo de cookies disponível para autenticação
+                                        Arquivo de cookies disponivel para autenticacao
                                     </span>
                                 {% else %}
                                     <span class="cookie-status none">
                                         <i class="fas fa-exclamation-triangle mr-1"></i>Sem Cookies
                                     </span>
                                     <span class="text-sm text-gray-400">
-                                        Alguns vídeos podem requerer autenticação
+                                        Alguns videos podem requerer autenticacao
                                     </span>
                                 {% endif %}
                             </div>
@@ -168,41 +168,41 @@
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         <div class="glass-effect p-6 rounded-xl shadow-lg card-hover">
                             <h3 class="text-xl font-semibold mb-4 text-cyan-300">
-                                <i class="fas fa-play-circle mr-2"></i>Formulário de Teste
+                                <i class="fas fa-play-circle mr-2"></i>Formulario de Teste
                             </h3>
                             <form id="api-test-form" class="space-y-4">
                                 <div>
-                                    <label for="url" class="block text-sm font-medium text-gray-400 mb-2">URL do Vídeo</label>
+                                    <label for="url" class="block text-sm font-medium text-gray-400 mb-2">URL do Video</label>
                                     <input type="url" name="url" id="url" placeholder="https://www.youtube.com/watch?v=..." required class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all">
                                 </div>
                                 <div>
                                     <label for="type" class="block text-sm font-medium text-gray-400 mb-2">Tipo</label>
                                     <select name="type" id="type" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
-                                        <option value="audio">🎵 Áudio (MP3)</option>
-                                        <option value="video">🎬 Vídeo (MP4)</option>
+                                        <option value="audio">Audio (MP3)</option>
+                                        <option value="video">Video (MP4)</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label for="quality" class="block text-sm font-medium text-gray-400 mb-2">Qualidade (Vídeo)</label>
+                                    <label for="quality" class="block text-sm font-medium text-gray-400 mb-2">Qualidade (Video)</label>
                                     <input type="text" name="quality" id="quality" placeholder="Ex: 720p (opcional)" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
                                 </div>
                                 <div>
-                                    <label for="bitrate" class="block text-sm font-medium text-gray-400 mb-2">Bitrate (Áudio)</label>
+                                    <label for="bitrate" class="block text-sm font-medium text-gray-400 mb-2">Bitrate (Audio)</label>
                                     <input type="text" name="bitrate" id="bitrate" placeholder="Ex: 192k (opcional)" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
                                 </div>
                                 <button type="submit" class="w-full py-3 px-4 rounded-lg text-white font-semibold bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 flex items-center justify-center space-x-2 transition-all">
                                     <i class="fa-solid fa-paper-plane"></i>
-                                    <span>Enviar Requisição</span>
+                                    <span>Enviar Requisicao</span>
                                 </button>
                             </form>
                         </div>
                         
                         <div class="glass-effect p-6 rounded-xl shadow-lg card-hover">
                             <h3 class="text-xl font-semibold mb-4 text-cyan-300">
-                                <i class="fas fa-terminal mr-2"></i>Log da Requisição
+                                <i class="fas fa-terminal mr-2"></i>Log da Requisicao
                             </h3>
                             <div id="api-test-log" class="bg-gray-900 rounded-lg p-4 h-80 overflow-y-auto font-mono text-sm border border-gray-700">
-                                <p class="text-gray-500">Aguardando requisição...</p>
+                                <p class="text-gray-500">Aguardando requisicao...</p>
                             </div>
                         </div>
                     </div>
@@ -210,8 +210,8 @@
                 
                 <section id="history" class="content-section">
                     <div class="mb-8">
-                        <h2 class="text-4xl font-bold text-cyan-300 mb-2">Histórico de Requisições</h2>
-                        <p class="text-gray-400">Acompanhe todas as requisições feitas à API</p>
+                        <h2 class="text-4xl font-bold text-cyan-300 mb-2">Historico de Requisicoes</h2>
+                        <p class="text-gray-400">Acompanhe todas as requisicoes feitas a API</p>
                     </div>
                     
                     <div class="glass-effect rounded-xl shadow-lg overflow-hidden">
@@ -220,9 +220,9 @@
                                 <thead class="bg-gray-700/50 sticky top-0">
                                     <tr>
                                         <th class="p-4 font-semibold text-cyan-300">Timestamp</th>
-                                        <th class="p-4 font-semibold text-cyan-300">Requisição</th>
+                                        <th class="p-4 font-semibold text-cyan-300">Requisicao</th>
                                         <th class="p-4 font-semibold text-cyan-300">Status</th>
-                                        <th class="p-4 font-semibold text-cyan-300">Ação</th>
+                                        <th class="p-4 font-semibold text-cyan-300">Acao</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -235,11 +235,11 @@
                                         </td>
                                         <td class="p-4 align-top">
                                             {% if item.response_data.status == 'completed' %}
-                                                <span class="px-3 py-1 text-xs font-semibold text-green-100 bg-green-600 rounded-full">✓ Concluído</span>
+                                                <span class="px-3 py-1 text-xs font-semibold text-green-100 bg-green-600 rounded-full">Concluido</span>
                                             {% elif item.response_data.status == 'processing' %}
-                                                <span class="px-3 py-1 text-xs font-semibold text-yellow-100 bg-yellow-600 rounded-full">⏳ Processando</span>
+                                                <span class="px-3 py-1 text-xs font-semibold text-yellow-100 bg-yellow-600 rounded-full">Processando</span>
                                             {% else %}
-                                                <span class="px-3 py-1 text-xs font-semibold text-red-100 bg-red-600 rounded-full">✗ Falhou</span>
+                                                <span class="px-3 py-1 text-xs font-semibold text-red-100 bg-red-600 rounded-full">Falhou</span>
                                             {% endif %}
                                         </td>
                                         <td class="p-4 align-top">
@@ -252,7 +252,7 @@
                                     <tr>
                                         <td colspan="4" class="text-center py-8 text-gray-500">
                                             <i class="fas fa-inbox text-4xl mb-4 block"></i>
-                                            Nenhum histórico encontrado.
+                                            Nenhum historico encontrado.
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -265,7 +265,7 @@
                 <section id="files" class="content-section">
                     <div class="mb-8">
                         <h2 class="text-4xl font-bold text-cyan-300 mb-2">Arquivos Baixados</h2>
-                        <p class="text-gray-400">Gerencie e reproduza seus arquivos de mídia</p>
+                        <p class="text-gray-400">Gerencie e reproduza seus arquivos de midia</p>
                     </div>
                     
                     <div class="file-grid">
@@ -276,7 +276,7 @@
                                      alt="Thumbnail" class="w-full h-48 object-cover">
                                 <div class="absolute top-2 right-2">
                                     <span class="px-2 py-1 text-xs font-semibold rounded-full {{ 'bg-purple-600' if file.media_type == 'audio' else 'bg-blue-600' }} text-white">
-                                        {{ '🎵 Áudio' if file.media_type == 'audio' else '🎬 Vídeo' }}
+                                        {{ 'Audio' if file.media_type == 'audio' else 'Video' }}
                                     </span>
                                 </div>
                                 <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
@@ -322,7 +322,7 @@
                         <div class="col-span-full text-center py-16 text-gray-500">
                             <i class="fas fa-folder-open text-6xl mb-4 block"></i>
                             <p class="text-xl">Nenhum ficheiro encontrado.</p>
-                            <p class="text-sm mt-2">Faça o primeiro download usando a API!</p>
+                            <p class="text-sm mt-2">Faca o primeiro download usando a API!</p>
                         </div>
                         {% endfor %}
                     </div>
@@ -330,20 +330,20 @@
 
                 <section id="settings" class="content-section">
                     <div class="mb-8">
-                        <h2 class="text-4xl font-bold text-cyan-300 mb-2">Configurações</h2>
-                        <p class="text-gray-400">Gerencie as configurações do sistema</p>
+                        <h2 class="text-4xl font-bold text-cyan-300 mb-2">Configuracoes</h2>
+                        <p class="text-gray-400">Gerencie as configuracoes do sistema</p>
                     </div>
                     
                     <div class="space-y-8">
-                        <!-- Configurações Gerais -->
+                        <!-- Configuracoes Gerais -->
                         <div class="glass-effect p-6 rounded-xl shadow-lg card-hover">
                             <h3 class="text-2xl font-semibold mb-4 text-cyan-300 border-b border-gray-600 pb-2">
-                                <i class="fas fa-cog mr-2"></i>Configurações Gerais
+                                <i class="fas fa-cog mr-2"></i>Configuracoes Gerais
                             </h3>
                             <form action="{{ url_for('update_settings') }}" method="POST" class="space-y-4">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label for="rate_limit" class="block text-sm font-medium text-gray-400 mb-2">Limite de Requisições</label>
+                                        <label for="rate_limit" class="block text-sm font-medium text-gray-400 mb-2">Limite de Requisicoes</label>
                                         <input type="text" name="rate_limit" id="rate_limit" value="{{ settings.DEFAULT_RATE_LIMIT }}" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
                                     </div>
                                     <div>
@@ -352,7 +352,7 @@
                                     </div>
                                 </div>
                                 <button type="submit" class="py-3 px-6 rounded-lg text-white font-semibold bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 transition-all">
-                                    <i class="fas fa-save mr-2"></i>Salvar Configurações
+                                    <i class="fas fa-save mr-2"></i>Salvar Configuracoes
                                 </button>
                             </form>
                         </div>
@@ -371,7 +371,7 @@
                                         <p class="text-xs text-gray-400 mt-1">
                                             Criada: {{ key.created_at.strftime('%d/%m/%Y %H:%M') }}
                                             {% if key.last_used %}
-                                            • Último uso: {{ key.last_used.strftime('%d/%m/%Y %H:%M') }}
+                                            • Ultimo uso: {{ key.last_used.strftime('%d/%m/%Y %H:%M') }}
                                             {% endif %}
                                         </p>
                                     </div>
@@ -511,15 +511,15 @@
                         </div>
                         <div class="space-y-4">
                             <div>
-                                <h4 class="font-semibold text-cyan-300 mb-2">Informações Básicas</h4>
-                                <p><strong>Título:</strong> ${metadata.title}</p>
+                                <h4 class="font-semibold text-cyan-300 mb-2">Informacoes Basicas</h4>
+                                <p><strong>Titulo:</strong> ${metadata.title}</p>
                                 <p><strong>Autor:</strong> ${metadata.uploader}</p>
-                                <p><strong>Duração:</strong> ${metadata.duration_string}</p>
+                                <p><strong>Duracao:</strong> ${metadata.duration_string}</p>
                                 <p><strong>Data de Upload:</strong> ${metadata.upload_date}</p>
                             </div>
                             <div>
-                                <h4 class="font-semibold text-cyan-300 mb-2">Estatísticas</h4>
-                                <p><strong>Visualizações:</strong> ${new Intl.NumberFormat().format(metadata.view_count || 0)}</p>
+                                <h4 class="font-semibold text-cyan-300 mb-2">Estatisticas</h4>
+                                <p><strong>Visualizacoes:</strong> ${new Intl.NumberFormat().format(metadata.view_count || 0)}</p>
                                 <p><strong>Gostos:</strong> ${new Intl.NumberFormat().format(metadata.like_count || 0)}</p>
                             </div>
                             <div>
@@ -529,9 +529,9 @@
                         </div>
                     </div>
                     <div class="mt-6">
-                        <h4 class="font-semibold text-cyan-300 mb-2">Descrição</h4>
+                        <h4 class="font-semibold text-cyan-300 mb-2">Descricao</h4>
                         <div class="bg-gray-800 p-4 rounded-lg max-h-40 overflow-y-auto">
-                            <p class="text-sm text-gray-300 whitespace-pre-wrap">${metadata.description || 'Sem descrição disponível.'}</p>
+                            <p class="text-sm text-gray-300 whitespace-pre-wrap">${metadata.description || 'Sem descricao disponivel.'}</p>
                         </div>
                     </div>
                 `;
@@ -555,7 +555,7 @@
                             <h3 class="text-xl font-semibold text-white mb-4">${title}</h3>
                             <audio controls class="w-full max-w-md mx-auto" autoplay>
                                 <source src="${downloadUrl}" type="audio/mpeg">
-                                Seu navegador não suporta o elemento de áudio.
+                                Seu navegador nao suporta o elemento de audio.
                             </audio>
                         </div>
                     `;
@@ -565,7 +565,7 @@
                             <h3 class="text-xl font-semibold text-white mb-4">${title}</h3>
                             <video controls class="w-full max-w-4xl mx-auto rounded-lg" autoplay>
                                 <source src="${downloadUrl}" type="video/mp4">
-                                Seu navegador não suporta o elemento de vídeo.
+                                Seu navegador nao suporta o elemento de video.
                             </video>
                         </div>
                     `;
@@ -611,19 +611,19 @@
         const apiTestForm = document.getElementById('api-test-form');
         const logContainer = document.getElementById('api-test-log');
 
+        function addLog(message, type = 'info') {
+            const color = type === 'error' ? 'text-red-400' : (type === 'success' ? 'text-green-400' : 'text-gray-400');
+            logContainer.innerHTML += `<p class="${color}"><span class="text-gray-500">[${new Date().toLocaleTimeString()}]</span> ${message}</p>`;
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
         apiTestForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             logContainer.innerHTML = '';
             const formData = new FormData(apiTestForm);
             const data = Object.fromEntries(formData.entries());
 
-            function addLog(message, type = 'info') {
-                const color = type === 'error' ? 'text-red-400' : (type === 'success' ? 'text-green-400' : 'text-gray-400');
-                logContainer.innerHTML += `<p class="${color}"><span class="text-gray-500">[${new Date().toLocaleTimeString()}]</span> ${message}</p>`;
-                logContainer.scrollTop = logContainer.scrollHeight;
-            }
-
-            addLog('🚀 Enviando requisição...');
+            addLog('Enviando requisicao...');
             
             try {
                 const response = await fetch("{{ url_for('test_api') }}", {
@@ -634,17 +634,17 @@
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.error || 'Erro desconhecido');
                 
-                addLog(`📥 Resposta recebida: ${JSON.stringify(result)}`);
+                addLog(`Resposta recebida: ${JSON.stringify(result)}`);
                 
                 if (result.status === 'processing' && result.task_id) {
-                    addLog(`⏳ Tarefa em processamento. ID: ${result.task_id}. Verificando status...`);
+                    addLog(`Tarefa em processamento. ID: ${result.task_id}. Verificando status...`);
                     pollTaskStatus(result.task_id);
                 } else if (result.status === 'completed') {
-                    addLog('✅ Tarefa concluída com sucesso!', 'success');
-                    addLog(`🔗 URL para Download: <a href="${result.result.download_url}" class="text-cyan-400 hover:underline" target="_blank">${result.result.download_url}</a>`);
+                    addLog('Tarefa concluida com sucesso!', 'success');
+                    addLog(`URL para Download: <a href="${result.result.download_url}" class="text-cyan-400 hover:underline" target="_blank">${result.result.download_url}</a>`);
                 }
             } catch (error) {
-                addLog(`❌ Erro na requisição inicial: ${error.message}`, 'error');
+                addLog(`Erro na requisicao inicial: ${error.message}`, 'error');
             }
         });
 
@@ -655,34 +655,28 @@
                     const response = await fetch(taskStatusUrl);
                     const result = await response.json();
                     if (!response.ok) {
-                        addLog(`❌ Erro ao verificar status: ${result.error || 'Erro desconhecido'}`, 'error');
+                        addLog(`Erro ao verificar status: ${result.error || 'Erro desconhecido'}`, 'error');
                         clearInterval(intervalId);
                         return;
                     }
                     if (result.status === 'completed') {
-                        addLog('✅ Tarefa concluída com sucesso!', 'success');
-                        addLog(`🔗 URL para Download: <a href="${result.result.download_url}" class="text-cyan-400 hover:underline" target="_blank">${result.result.download_url}</a>`);
+                        addLog('Tarefa concluida com sucesso!', 'success');
+                        addLog(`URL para Download: <a href="${result.result.download_url}" class="text-cyan-400 hover:underline" target="_blank">${result.result.download_url}</a>`);
                         clearInterval(intervalId);
                         
                         // Refresh page to show new file
                         setTimeout(() => location.reload(), 2000);
                     } else if (result.status === 'failed') {
-                        addLog(`❌ A tarefa falhou: ${result.message}`, 'error');
+                        addLog(`A tarefa falhou: ${result.message}`, 'error');
                         clearInterval(intervalId);
                     } else {
-                        addLog(`⏳ Status da tarefa: ${result.status}...`);
+                        addLog(`Status da tarefa: ${result.status}...`);
                     }
                 } catch (error) {
-                    addLog(`🌐 Erro de rede ao verificar status: ${error.message}`, 'error');
+                    addLog(`Erro de rede ao verificar status: ${error.message}`, 'error');
                     clearInterval(intervalId);
                 }
             }, 3000);
-        }
-
-        function addLog(message, type = 'info') {
-            const color = type === 'error' ? 'text-red-400' : (type === 'success' ? 'text-green-400' : 'text-gray-400');
-            logContainer.innerHTML += `<p class="${color}"><span class="text-gray-500">[${new Date().toLocaleTimeString()}]</span> ${message}</p>`;
-            logContainer.scrollTop = logContainer.scrollHeight;
         }
     });
     </script>
