@@ -6,25 +6,34 @@
     <title>Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .sidebar-link.active { background-color: #0891b2; color: white; }
-        .sidebar-link { display: flex; align-items: center; gap: 0.75rem; transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out; }
+        .sidebar-link.active { background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%); color: white; box-shadow: 0 4px 15px rgba(8, 145, 178, 0.3); }
+        .sidebar-link { display: flex; align-items: center; gap: 0.75rem; transition: all 0.3s ease; }
+        .sidebar-link:hover { background: rgba(8, 145, 178, 0.1); transform: translateX(4px); }
         .content-section { display: none; }
         .content-section.active { display: block; animation: fade-in 0.5s ease-in-out; }
-        @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fade-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .modal { display: none; }
         .modal.active { display: flex; }
+        .glass-effect { background: rgba(31, 41, 55, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .gradient-bg { background: linear-gradient(135deg, #1f2937 0%, #111827 100%); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); }
+        .player-container { background: linear-gradient(135deg, #374151 0%, #1f2937 100%); }
+        .progress-bar { background: linear-gradient(90deg, #06b6d4 0%, #0891b2 100%); }
+        .volume-slider::-webkit-slider-thumb { background: #06b6d4; }
+        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-200">
+<body class="bg-gray-900 text-gray-200 gradient-bg">
     
     <div id="flash-container" class="fixed top-5 right-5 z-50 w-full max-w-sm">
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-            <div class="p-4 mb-2 rounded-md {{ 'bg-green-500' if category == 'success' else ('bg-red-500' if category == 'error' else 'bg-blue-500') }} text-white text-center shadow-lg" role="alert">
+            <div class="p-4 mb-2 rounded-lg glass-effect {{ 'border-green-500' if category == 'success' else ('border-red-500' if category == 'error' else 'border-blue-500') }} border text-white text-center shadow-xl" role="alert">
                 <span>{{ message }}</span>
             </div>
             {% endfor %}
@@ -33,127 +42,373 @@
     </div>
 
     <!-- Response Modal -->
-    <div id="response-modal" class="modal fixed inset-0 bg-black/60 items-center justify-center z-50">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl"><div class="flex justify-between items-center p-4 border-b border-gray-700"><h3 class="text-xl font-bold">Resposta Completa</h3><button class="close-modal-btn text-gray-400 hover:text-white">&times;</button></div><div class="p-6"><pre id="modal-json-content" class="bg-gray-900 p-4 rounded-md text-sm text-green-300 max-h-96 overflow-auto"></pre></div></div>
+    <div id="response-modal" class="modal fixed inset-0 bg-black/70 items-center justify-center z-50">
+        <div class="glass-effect rounded-xl shadow-2xl w-full max-w-2xl">
+            <div class="flex justify-between items-center p-6 border-b border-gray-600">
+                <h3 class="text-xl font-bold text-cyan-300">Resposta Completa</h3>
+                <button class="close-modal-btn text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div class="p-6">
+                <pre id="modal-json-content" class="bg-gray-900 p-4 rounded-lg text-sm text-green-300 max-h-96 overflow-auto border border-gray-700"></pre>
+            </div>
+        </div>
     </div>
     
     <!-- Metadata Modal -->
-    <div id="metadata-modal" class="modal fixed inset-0 bg-black/60 items-center justify-center z-50">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl"><div class="flex justify-between items-center p-4 border-b border-gray-700"><h3 class="text-xl font-bold">Detalhes do Ficheiro</h3><button class="close-modal-btn text-gray-400 hover:text-white">&times;</button></div><div id="metadata-modal-content" class="p-6 space-y-4"></div></div>
+    <div id="metadata-modal" class="modal fixed inset-0 bg-black/70 items-center justify-center z-50">
+        <div class="glass-effect rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center p-6 border-b border-gray-600">
+                <h3 class="text-xl font-bold text-cyan-300">Detalhes do Ficheiro</h3>
+                <button class="close-modal-btn text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div id="metadata-modal-content" class="p-6"></div>
+        </div>
+    </div>
+
+    <!-- Player Modal -->
+    <div id="player-modal" class="modal fixed inset-0 bg-black/80 items-center justify-center z-50">
+        <div class="glass-effect rounded-xl shadow-2xl w-full max-w-4xl">
+            <div class="flex justify-between items-center p-6 border-b border-gray-600">
+                <h3 class="text-xl font-bold text-cyan-300">Player de Mídia</h3>
+                <button class="close-modal-btn text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div class="p-6">
+                <div id="player-content" class="player-container rounded-lg p-6">
+                    <!-- Player será inserido aqui dinamicamente -->
+                </div>
+            </div>
+        </div>
     </div>
 
     {% if force_change %}
         <div class="flex items-center justify-center min-h-screen">
-            <div class="w-full max-w-md bg-gray-800 rounded-xl shadow-2xl p-8">
+            <div class="w-full max-w-md glass-effect rounded-xl shadow-2xl p-8">
                 <h1 class="text-3xl font-bold text-center text-cyan-400 mb-2">Alteração Obrigatória</h1>
                 <p class="text-center text-gray-400 mb-6">Por segurança, altere a senha padrão.</p>
                 <form action="{{ url_for('change_password') }}" method="POST" class="space-y-6">
-                    <div><label for="new_password" class="block text-sm font-medium text-gray-400">Nova Senha</label><input type="password" name="new_password" id="new_password" required class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"></div>
-                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500">Salvar Nova Senha</button>
+                    <div>
+                        <label for="new_password" class="block text-sm font-medium text-gray-400">Nova Senha</label>
+                        <input type="password" name="new_password" id="new_password" required class="mt-1 block w-full bg-gray-700/50 border border-gray-600 rounded-lg shadow-sm py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                    </div>
+                    <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all">
+                        Salvar Nova Senha
+                    </button>
                 </form>
             </div>
         </div>
     {% else %}
         <div class="flex h-screen">
-            <aside class="w-64 bg-gray-800 p-6 flex flex-col justify-between shadow-lg">
+            <aside class="w-64 glass-effect p-6 flex flex-col justify-between shadow-2xl">
                 <div>
-                    <h1 class="text-2xl font-bold text-cyan-400 mb-8">Painel Admin</h1>
+                    <h1 class="text-2xl font-bold text-cyan-400 mb-8 text-center">
+                        <i class="fas fa-download mr-2"></i>Painel Admin
+                    </h1>
                     <nav id="sidebar-nav" class="flex flex-col space-y-2">
-                        <a href="#tester" class="sidebar-link p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white"><i class="fa-solid fa-vial w-6 text-center"></i><span>Testar API</span></a>
-                        <a href="#history" class="sidebar-link p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white"><i class="fa-solid fa-clock-rotate-left w-6 text-center"></i><span>Histórico</span></a>
-                        <a href="#files" class="sidebar-link p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white"><i class="fa-solid fa-folder-open w-6 text-center"></i><span>Arquivos</span></a>
-                        <a href="#settings" class="sidebar-link p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white"><i class="fa-solid fa-gear w-6 text-center"></i><span>Configurações</span></a>
+                        <a href="#tester" class="sidebar-link p-3 rounded-lg text-gray-300">
+                            <i class="fa-solid fa-vial w-6 text-center"></i>
+                            <span>Testar API</span>
+                        </a>
+                        <a href="#history" class="sidebar-link p-3 rounded-lg text-gray-300">
+                            <i class="fa-solid fa-clock-rotate-left w-6 text-center"></i>
+                            <span>Histórico</span>
+                        </a>
+                        <a href="#files" class="sidebar-link p-3 rounded-lg text-gray-300">
+                            <i class="fa-solid fa-folder-open w-6 text-center"></i>
+                            <span>Arquivos</span>
+                        </a>
+                        <a href="#settings" class="sidebar-link p-3 rounded-lg text-gray-300">
+                            <i class="fa-solid fa-gear w-6 text-center"></i>
+                            <span>Configurações</span>
+                        </a>
                     </nav>
                 </div>
-                <a href="{{ url_for('logout') }}" class="sidebar-link justify-center text-center py-3 px-4 rounded-lg bg-red-600/80 hover:bg-red-700"><i class="fa-solid fa-right-from-bracket w-6 text-center"></i><span>Sair</span></a>
+                <a href="{{ url_for('logout') }}" class="sidebar-link justify-center text-center py-3 px-4 rounded-lg bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition-all">
+                    <i class="fa-solid fa-right-from-bracket w-6 text-center"></i>
+                    <span>Sair</span>
+                </a>
             </aside>
 
             <main class="flex-1 p-10 overflow-y-auto">
                 <section id="tester" class="content-section">
-                    <h2 class="text-4xl font-bold mb-6 text-cyan-300">Testar API</h2>
+                    <div class="mb-8">
+                        <h2 class="text-4xl font-bold text-cyan-300 mb-2">Testar API</h2>
+                        <p class="text-gray-400">Teste a funcionalidade da API de download de mídia</p>
+                    </div>
+                    
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div class="bg-gray-800 p-6 rounded-lg shadow-md">
+                        <div class="glass-effect p-6 rounded-xl shadow-lg card-hover">
+                            <h3 class="text-xl font-semibold mb-4 text-cyan-300">
+                                <i class="fas fa-play-circle mr-2"></i>Formulário de Teste
+                            </h3>
                             <form id="api-test-form" class="space-y-4">
-                                <div><label for="url" class="block text-sm font-medium text-gray-400">URL do Vídeo</label><input type="url" name="url" id="url" placeholder="https://www.youtube.com/watch?v=..." required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white"></div>
-                                <div><label for="type" class="block text-sm font-medium text-gray-400">Tipo</label><select name="type" id="type" class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white"><option value="audio">Áudio</option><option value="video">Vídeo</option></select></div>
-                                <div><label for="quality" class="block text-sm font-medium text-gray-400">Qualidade (Vídeo)</label><input type="text" name="quality" id="quality" placeholder="Ex: 720p (opcional)" class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white"></div>
-                                <div><label for="bitrate" class="block text-sm font-medium text-gray-400">Bitrate (Áudio)</label><input type="text" name="bitrate" id="bitrate" placeholder="Ex: 192k (opcional)" class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white"></div>
-                                <button type="submit" class="w-full py-3 px-4 rounded-md text-white font-semibold bg-cyan-600 hover:bg-cyan-700 flex items-center justify-center space-x-2"><i class="fa-solid fa-paper-plane"></i><span>Enviar Requisição</span></button>
+                                <div>
+                                    <label for="url" class="block text-sm font-medium text-gray-400 mb-2">URL do Vídeo</label>
+                                    <input type="url" name="url" id="url" placeholder="https://www.youtube.com/watch?v=..." required class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all">
+                                </div>
+                                <div>
+                                    <label for="type" class="block text-sm font-medium text-gray-400 mb-2">Tipo</label>
+                                    <select name="type" id="type" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                                        <option value="audio">🎵 Áudio (MP3)</option>
+                                        <option value="video">🎬 Vídeo (MP4)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="quality" class="block text-sm font-medium text-gray-400 mb-2">Qualidade (Vídeo)</label>
+                                    <input type="text" name="quality" id="quality" placeholder="Ex: 720p (opcional)" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                                </div>
+                                <div>
+                                    <label for="bitrate" class="block text-sm font-medium text-gray-400 mb-2">Bitrate (Áudio)</label>
+                                    <input type="text" name="bitrate" id="bitrate" placeholder="Ex: 192k (opcional)" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                                </div>
+                                <button type="submit" class="w-full py-3 px-4 rounded-lg text-white font-semibold bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 flex items-center justify-center space-x-2 transition-all">
+                                    <i class="fa-solid fa-paper-plane"></i>
+                                    <span>Enviar Requisição</span>
+                                </button>
                             </form>
                         </div>
-                        <div class="bg-gray-800 p-6 rounded-lg shadow-md"><h3 class="text-xl font-semibold mb-4">Log da Requisição</h3><div id="api-test-log" class="bg-gray-900 rounded-md p-4 h-80 overflow-y-auto font-mono text-sm"><p class="text-gray-500">Aguardando requisição...</p></div></div>
+                        
+                        <div class="glass-effect p-6 rounded-xl shadow-lg card-hover">
+                            <h3 class="text-xl font-semibold mb-4 text-cyan-300">
+                                <i class="fas fa-terminal mr-2"></i>Log da Requisição
+                            </h3>
+                            <div id="api-test-log" class="bg-gray-900 rounded-lg p-4 h-80 overflow-y-auto font-mono text-sm border border-gray-700">
+                                <p class="text-gray-500">Aguardando requisição...</p>
+                            </div>
+                        </div>
                     </div>
                 </section>
                 
                 <section id="history" class="content-section">
-                    <h2 class="text-4xl font-bold mb-6 text-cyan-300">Histórico de Requisições</h2>
-                     <div class="bg-gray-800 rounded-lg shadow-md overflow-hidden"><div class="overflow-x-auto max-h-[75vh]"><table class="table-auto w-full text-left">
-                        <thead class="bg-gray-700 sticky top-0"><tr><th class="p-4">Timestamp</th><th class="p-4">Requisição</th><th class="p-4">Status</th><th class="p-4">Ação</th></tr></thead>
-                        <tbody>
-                            {% for item in history %}<tr class="border-t border-gray-700 hover:bg-gray-700/50">
-                                <td class="p-4 align-top text-sm text-gray-400">{{ item.timestamp }}</td>
-                                <td class="p-4 align-top"><p class="font-semibold">{{ item.request.type | capitalize }}</p><p class="text-xs text-gray-400 truncate w-64">{{ item.request.url }}</p></td>
-                                <td class="p-4 align-top">
-                                    {% if item.response.status == 'completed' %}<span class="px-2 py-1 text-xs font-semibold text-green-100 bg-green-600 rounded-full">Concluído</span>
-                                    {% elif item.response.status == 'processing' %}<span class="px-2 py-1 text-xs font-semibold text-yellow-100 bg-yellow-600 rounded-full">Processando</span>
-                                    {% else %}<span class="px-2 py-1 text-xs font-semibold text-red-100 bg-red-600 rounded-full">Falhou</span>{% endif %}
-                                </td>
-                                <td class="p-4 align-top"><button class="view-response-btn text-cyan-400 hover:underline" data-response='{{ item.response | tojson }}'>Ver Resposta</button></td>
-                            </tr>
-                            {% else %}<tr><td colspan="4" class="text-center py-4">Nenhum histórico encontrado.</td></tr>{% endfor %}
-                        </tbody>
-                    </table></div></div>
+                    <div class="mb-8">
+                        <h2 class="text-4xl font-bold text-cyan-300 mb-2">Histórico de Requisições</h2>
+                        <p class="text-gray-400">Acompanhe todas as requisições feitas à API</p>
+                    </div>
+                    
+                    <div class="glass-effect rounded-xl shadow-lg overflow-hidden">
+                        <div class="overflow-x-auto max-h-[75vh]">
+                            <table class="table-auto w-full text-left">
+                                <thead class="bg-gray-700/50 sticky top-0">
+                                    <tr>
+                                        <th class="p-4 font-semibold text-cyan-300">Timestamp</th>
+                                        <th class="p-4 font-semibold text-cyan-300">Requisição</th>
+                                        <th class="p-4 font-semibold text-cyan-300">Status</th>
+                                        <th class="p-4 font-semibold text-cyan-300">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in history %}
+                                    <tr class="border-t border-gray-700 hover:bg-gray-700/30 transition-colors">
+                                        <td class="p-4 align-top text-sm text-gray-400">{{ item.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                        <td class="p-4 align-top">
+                                            <p class="font-semibold">{{ item.request_data.type | capitalize }}</p>
+                                            <p class="text-xs text-gray-400 truncate w-64">{{ item.request_data.url }}</p>
+                                        </td>
+                                        <td class="p-4 align-top">
+                                            {% if item.response_data.status == 'completed' %}
+                                                <span class="px-3 py-1 text-xs font-semibold text-green-100 bg-green-600 rounded-full">✓ Concluído</span>
+                                            {% elif item.response_data.status == 'processing' %}
+                                                <span class="px-3 py-1 text-xs font-semibold text-yellow-100 bg-yellow-600 rounded-full">⏳ Processando</span>
+                                            {% else %}
+                                                <span class="px-3 py-1 text-xs font-semibold text-red-100 bg-red-600 rounded-full">✗ Falhou</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="p-4 align-top">
+                                            <button class="view-response-btn text-cyan-400 hover:text-cyan-300 transition-colors" data-response='{{ item.response_data | tojson }}'>
+                                                <i class="fas fa-eye mr-1"></i>Ver Resposta
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-8 text-gray-500">
+                                            <i class="fas fa-inbox text-4xl mb-4 block"></i>
+                                            Nenhum histórico encontrado.
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </section>
 
                 <section id="files" class="content-section">
-                    <h2 class="text-4xl font-bold mb-6 text-cyan-300">Arquivos Baixados</h2>
-                    <div class="bg-gray-800 rounded-lg shadow-md overflow-hidden"><div class="overflow-x-auto max-h-[75vh]"><table class="table-auto w-full text-left">
-                        <thead class="bg-gray-700 sticky top-0"><tr><th class="p-4"></th><th class="p-4">Título</th><th class="p-4">Tamanho</th><th class="p-4">Ações</th></tr></thead>
-                        <tbody>
-                            {% for file in files %}<tr class="border-t border-gray-700 hover:bg-gray-700/50">
-                                <td class="p-2"><img src="{{ file.metadata.thumbnail }}" alt="Thumbnail" class="w-32 h-18 object-cover rounded-md"></td>
-                                <td class="p-4 align-top"><p class="font-semibold">{{ file.metadata.title }}</p><p class="text-xs text-gray-400">{{ file.metadata.uploader }}</p></td>
-                                <td class="p-4 align-top">{{ file.size_mb }} MB</td>
-                                <td class="p-4 align-top space-x-4">
-                                    <a href="{{ url_for('download_file', filename=file.name) }}" target="_blank" class="text-cyan-400 hover:underline">Baixar</a>
-                                    <button class="view-metadata-btn text-blue-400 hover:underline" data-metadata='{{ file.metadata | tojson }}'>Detalhes</button>
-                                </td>
-                            </tr>
-                            {% else %}<tr><td colspan="4" class="text-center py-4">Nenhum ficheiro encontrado.</td></tr>{% endfor %}
-                        </tbody>
-                    </table></div></div>
+                    <div class="mb-8">
+                        <h2 class="text-4xl font-bold text-cyan-300 mb-2">Arquivos Baixados</h2>
+                        <p class="text-gray-400">Gerencie e reproduza seus arquivos de mídia</p>
+                    </div>
+                    
+                    <div class="file-grid">
+                        {% for file in files %}
+                        <div class="glass-effect rounded-xl shadow-lg overflow-hidden card-hover">
+                            <div class="relative">
+                                <img src="{{ file.thumbnail_url or 'https://placehold.co/320x180/1f2937/374151?text=Sem+Thumb' }}" 
+                                     alt="Thumbnail" class="w-full h-48 object-cover">
+                                <div class="absolute top-2 right-2">
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full {{ 'bg-purple-600' if file.media_type == 'audio' else 'bg-blue-600' }} text-white">
+                                        {{ '🎵 Áudio' if file.media_type == 'audio' else '🎬 Vídeo' }}
+                                    </span>
+                                </div>
+                                <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                                    {{ file.duration_string }}
+                                </div>
+                            </div>
+                            
+                            <div class="p-4">
+                                <h3 class="font-semibold text-white mb-2 line-clamp-2">{{ file.title }}</h3>
+                                <p class="text-sm text-gray-400 mb-2">{{ file.uploader }}</p>
+                                <p class="text-xs text-gray-500 mb-4">{{ file.file_size_mb }} MB • {{ file.created_at.strftime('%d/%m/%Y') }}</p>
+                                
+                                <div class="flex space-x-2">
+                                    <button class="play-media-btn flex-1 py-2 px-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-sm rounded-lg transition-all" 
+                                            data-filename="{{ file.filename }}" 
+                                            data-type="{{ file.media_type }}"
+                                            data-title="{{ file.title }}">
+                                        <i class="fas fa-play mr-1"></i>Reproduzir
+                                    </button>
+                                    <a href="{{ url_for('download_file', filename=file.filename) }}" 
+                                       target="_blank" 
+                                       class="py-2 px-3 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white text-sm rounded-lg transition-all">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                    <button class="view-metadata-btn py-2 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm rounded-lg transition-all" 
+                                            data-metadata='{{ {
+                                                "title": file.title,
+                                                "uploader": file.uploader,
+                                                "duration_string": file.duration_string,
+                                                "view_count": file.view_count,
+                                                "like_count": file.like_count,
+                                                "upload_date": file.upload_date,
+                                                "webpage_url": file.original_url,
+                                                "description": file.description,
+                                                "thumbnail_url": file.thumbnail_url
+                                            } | tojson }}'>
+                                        <i class="fas fa-info"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="col-span-full text-center py-16 text-gray-500">
+                            <i class="fas fa-folder-open text-6xl mb-4 block"></i>
+                            <p class="text-xl">Nenhum ficheiro encontrado.</p>
+                            <p class="text-sm mt-2">Faça o primeiro download usando a API!</p>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </section>
 
                 <section id="settings" class="content-section">
-                    <h2 class="text-4xl font-bold mb-6 text-cyan-300">Configurações</h2>
-                    <div class="space-y-12">
-                        <div class="bg-gray-800 p-6 rounded-lg shadow-md"><h3 class="text-2xl font-semibold mb-4 border-b border-gray-700 pb-2">Gerais</h3>
+                    <div class="mb-8">
+                        <h2 class="text-4xl font-bold text-cyan-300 mb-2">Configurações</h2>
+                        <p class="text-gray-400">Gerencie as configurações do sistema</p>
+                    </div>
+                    
+                    <div class="space-y-8">
+                        <!-- Configurações Gerais -->
+                        <div class="glass-effect p-6 rounded-xl shadow-lg card-hover">
+                            <h3 class="text-2xl font-semibold mb-4 text-cyan-300 border-b border-gray-600 pb-2">
+                                <i class="fas fa-cog mr-2"></i>Configurações Gerais
+                            </h3>
                             <form action="{{ url_for('update_settings') }}" method="POST" class="space-y-4">
-                                <div><label for="rate_limit" class="block text-sm font-medium text-gray-400">Limite de Requisições</label><input type="text" name="rate_limit" id="rate_limit" value="{{ settings.DEFAULT_RATE_LIMIT }}" class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white"></div>
-                                <div><label for="timeout" class="block text-sm font-medium text-gray-400">Timeout da Resposta Direta (segundos)</label><input type="number" name="timeout" id="timeout" value="{{ settings.TASK_COMPLETION_TIMEOUT }}" class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white"></div>
-                                <button type="submit" class="w-full md:w-auto py-2 px-6 rounded-md text-white font-semibold bg-cyan-600 hover:bg-cyan-700">Salvar Gerais</button>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="rate_limit" class="block text-sm font-medium text-gray-400 mb-2">Limite de Requisições</label>
+                                        <input type="text" name="rate_limit" id="rate_limit" value="{{ settings.DEFAULT_RATE_LIMIT }}" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                                    </div>
+                                    <div>
+                                        <label for="timeout" class="block text-sm font-medium text-gray-400 mb-2">Timeout da Resposta (segundos)</label>
+                                        <input type="number" name="timeout" id="timeout" value="{{ settings.TASK_COMPLETION_TIMEOUT }}" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                                    </div>
+                                </div>
+                                <button type="submit" class="py-3 px-6 rounded-lg text-white font-semibold bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 transition-all">
+                                    <i class="fas fa-save mr-2"></i>Salvar Configurações
+                                </button>
                             </form>
                         </div>
-                        <div class="bg-gray-800 p-6 rounded-lg shadow-md"><h3 class="text-2xl font-semibold mb-4 border-b border-gray-700 pb-2">Chaves de API</h3>
-                            <div class="space-y-3 mb-4">
-                                {% for key in settings.VALID_API_KEYS %}<div class="flex items-center justify-between bg-gray-700 p-3 rounded-md"><span class="font-mono text-sm">{{ key }}</span><form action="{{ url_for('delete_api_key') }}" method="POST" onsubmit="return confirm('Tem a certeza que quer apagar esta chave?');"><input type="hidden" name="api_key" value="{{ key }}"><button type="submit" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button></form></div>
-                                {% else %}<p class="text-gray-500">Nenhuma chave de API configurada.</p>{% endfor %}
+
+                        <!-- Chaves de API -->
+                        <div class="glass-effect p-6 rounded-xl shadow-lg card-hover">
+                            <h3 class="text-2xl font-semibold mb-4 text-cyan-300 border-b border-gray-600 pb-2">
+                                <i class="fas fa-key mr-2"></i>Chaves de API
+                            </h3>
+                            
+                            <div class="space-y-3 mb-6">
+                                {% for key in api_keys %}
+                                <div class="flex items-center justify-between bg-gray-700/30 p-4 rounded-lg border border-gray-600">
+                                    <div>
+                                        <span class="font-mono text-sm text-white">{{ key.key }}</span>
+                                        <p class="text-xs text-gray-400 mt-1">
+                                            Criada: {{ key.created_at.strftime('%d/%m/%Y %H:%M') }}
+                                            {% if key.last_used %}
+                                            • Último uso: {{ key.last_used.strftime('%d/%m/%Y %H:%M') }}
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    <form action="{{ url_for('delete_api_key') }}" method="POST" onsubmit="return confirm('Tem a certeza que quer apagar esta chave?');">
+                                        <input type="hidden" name="api_key" value="{{ key.key }}">
+                                        <button type="submit" class="text-red-400 hover:text-red-300 p-2 rounded-lg hover:bg-red-900/20 transition-all">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                                {% else %}
+                                <p class="text-gray-500 text-center py-4">Nenhuma chave de API configurada.</p>
+                                {% endfor %}
                             </div>
-                            <form action="{{ url_for('new_api_key') }}" method="POST"><button type="submit" class="w-full md:w-auto py-2 px-6 rounded-md text-white font-semibold bg-green-600 hover:bg-green-700">Gerar Nova Chave</button></form>
+                            
+                            <form action="{{ url_for('new_api_key') }}" method="POST" class="flex gap-4">
+                                <input type="text" name="name" placeholder="Nome da chave (opcional)" class="flex-1 bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                                <button type="submit" class="py-3 px-6 rounded-lg text-white font-semibold bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 transition-all">
+                                    <i class="fas fa-plus mr-2"></i>Gerar Nova Chave
+                                </button>
+                            </form>
                         </div>
-                        <div class="bg-gray-800 p-6 rounded-lg shadow-md border border-red-500/50"><h3 class="text-2xl font-semibold mb-4 text-red-400 border-b border-red-500/50 pb-2">Zona de Perigo</h3>
+
+                        <!-- Zona de Perigo -->
+                        <div class="glass-effect p-6 rounded-xl shadow-lg border border-red-500/30 card-hover">
+                            <h3 class="text-2xl font-semibold mb-4 text-red-400 border-b border-red-500/30 pb-2">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>Zona de Perigo
+                            </h3>
+                            
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div><h4 class="font-semibold mb-2">Alterar Senha</h4><form action="{{ url_for('change_password') }}" method="POST" class="space-y-4"><div><label for="new_password_dash" class="block text-sm font-medium text-gray-400">Nova Senha</label><input type="password" name="new_password" id="new_password_dash" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white"></div><button type="submit" class="w-full py-2 px-4 rounded-md text-white bg-yellow-600 hover:bg-yellow-700">Salvar Senha</button></form></div>
-                                <div><h4 class="font-semibold mb-2">Ficheiro de Cookies</h4>
-                                    <div class="flex items-center space-x-4">
-                                        <form action="{{ url_for('upload_cookies') }}" method="POST" enctype="multipart/form-data" class="flex-1">
-                                            <label for="cookie_file" class="w-full cursor-pointer text-center block py-2 px-4 rounded-md text-white bg-cyan-600 hover:bg-cyan-700">Substituir Ficheiro</label>
+                                <!-- Alterar Senha -->
+                                <div>
+                                    <h4 class="font-semibold mb-3 text-yellow-400">
+                                        <i class="fas fa-lock mr-2"></i>Alterar Senha
+                                    </h4>
+                                    <form action="{{ url_for('change_password') }}" method="POST" class="space-y-4">
+                                        <div>
+                                            <label for="new_password_dash" class="block text-sm font-medium text-gray-400 mb-2">Nova Senha</label>
+                                            <input type="password" name="new_password" id="new_password_dash" required class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500">
+                                        </div>
+                                        <button type="submit" class="w-full py-3 px-4 rounded-lg text-white bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 transition-all">
+                                            <i class="fas fa-key mr-2"></i>Alterar Senha
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <!-- Ficheiro de Cookies -->
+                                <div>
+                                    <h4 class="font-semibold mb-3 text-orange-400">
+                                        <i class="fas fa-cookie-bite mr-2"></i>Ficheiro de Cookies
+                                    </h4>
+                                    <div class="space-y-4">
+                                        <form action="{{ url_for('upload_cookies') }}" method="POST" enctype="multipart/form-data">
+                                            <label for="cookie_file" class="w-full cursor-pointer text-center block py-3 px-4 rounded-lg text-white bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 transition-all">
+                                                <i class="fas fa-upload mr-2"></i>Substituir Ficheiro
+                                            </label>
                                             <input type="file" name="cookie_file" id="cookie_file" class="hidden" onchange="this.form.submit()">
                                         </form>
+                                        
                                         {% if cookie_file_exists %}
                                         <form action="{{ url_for('delete_cookie_file') }}" method="POST" onsubmit="return confirm('Tem a certeza que quer apagar o ficheiro de cookies?');">
-                                            <button type="submit" class="py-2 px-4 rounded-md text-white bg-red-600 hover:bg-red-700"><i class="fa-solid fa-trash"></i></button>
+                                            <button type="submit" class="w-full py-3 px-4 rounded-lg text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition-all">
+                                                <i class="fa-solid fa-trash mr-2"></i>Remover Cookies
+                                            </button>
                                         </form>
+                                        {% else %}
+                                        <p class="text-sm text-gray-500 text-center">Nenhum ficheiro de cookies carregado</p>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -164,12 +419,14 @@
             </main>
         </div>
     {% endif %}
+
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         const sections = document.querySelectorAll('.content-section');
         const navLinks = document.querySelectorAll('#sidebar-nav a');
         const responseModal = document.getElementById('response-modal');
         const metadataModal = document.getElementById('metadata-modal');
+        const playerModal = document.getElementById('player-modal');
 
         function showSection(hash) {
             sections.forEach(section => section.classList.remove('active'));
@@ -181,15 +438,18 @@
         }
 
         navLinks.forEach(link => {
-            link.addEventListener('click', (e) => { window.location.hash = e.currentTarget.getAttribute('href'); });
+            link.addEventListener('click', (e) => { 
+                e.preventDefault();
+                window.location.hash = e.currentTarget.getAttribute('href'); 
+            });
         });
 
         window.addEventListener('hashchange', () => showSection(window.location.hash || '#tester'));
         
         const initialHash = window.location.hash || '#tester';
-        window.location.hash = initialHash;
         showSection(initialHash);
         
+        // Auto-hide flash messages
         setTimeout(() => {
             const flashContainer = document.getElementById('flash-container');
             if (flashContainer) {
@@ -199,6 +459,7 @@
             }
         }, 5000);
 
+        // Response modal
         document.querySelectorAll('.view-response-btn').forEach(button => {
             button.addEventListener('click', () => {
                 const responseData = JSON.parse(button.dataset.response);
@@ -207,31 +468,116 @@
             });
         });
         
+        // Metadata modal
         document.querySelectorAll('.view-metadata-btn').forEach(button => {
             button.addEventListener('click', () => {
                 const metadata = JSON.parse(button.dataset.metadata);
                 const contentEl = document.getElementById('metadata-modal-content');
                 contentEl.innerHTML = `
-                    <p><strong>Título:</strong> ${metadata.title}</p>
-                    <p><strong>Autor:</strong> ${metadata.uploader}</p>
-                    <p><strong>Duração:</strong> ${metadata.duration_string}</p>
-                    <p><strong>Visualizações:</strong> ${new Intl.NumberFormat().format(metadata.view_count)}</p>
-                    <p><strong>Gostos:</strong> ${new Intl.NumberFormat().format(metadata.like_count)}</p>
-                    <p><strong>Data de Upload:</strong> ${metadata.upload_date}</p>
-                    <p><strong>URL Original:</strong> <a href="${metadata.webpage_url}" target="_blank" class="text-cyan-400 hover:underline">Link</a></p>
-                    <div class="mt-4"><strong class="block mb-2">Descrição:</strong><p class="text-sm text-gray-400 max-h-40 overflow-y-auto">${metadata.description.replace(/\n/g, '<br>')}</p></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <img src="${metadata.thumbnail_url || 'https://placehold.co/400x225/1f2937/374151?text=Sem+Thumb'}" 
+                                 alt="Thumbnail" class="w-full rounded-lg shadow-lg">
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-semibold text-cyan-300 mb-2">Informações Básicas</h4>
+                                <p><strong>Título:</strong> ${metadata.title}</p>
+                                <p><strong>Autor:</strong> ${metadata.uploader}</p>
+                                <p><strong>Duração:</strong> ${metadata.duration_string}</p>
+                                <p><strong>Data de Upload:</strong> ${metadata.upload_date}</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-cyan-300 mb-2">Estatísticas</h4>
+                                <p><strong>Visualizações:</strong> ${new Intl.NumberFormat().format(metadata.view_count || 0)}</p>
+                                <p><strong>Gostos:</strong> ${new Intl.NumberFormat().format(metadata.like_count || 0)}</p>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-cyan-300 mb-2">Links</h4>
+                                <p><strong>URL Original:</strong> <a href="${metadata.webpage_url}" target="_blank" class="text-cyan-400 hover:underline">Abrir no YouTube</a></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <h4 class="font-semibold text-cyan-300 mb-2">Descrição</h4>
+                        <div class="bg-gray-800 p-4 rounded-lg max-h-40 overflow-y-auto">
+                            <p class="text-sm text-gray-300 whitespace-pre-wrap">${metadata.description || 'Sem descrição disponível.'}</p>
+                        </div>
+                    </div>
                 `;
                 metadataModal.classList.add('active');
             });
         });
 
+        // Player modal
+        document.querySelectorAll('.play-media-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const filename = button.dataset.filename;
+                const type = button.dataset.type;
+                const title = button.dataset.title;
+                const downloadUrl = `/api/download/${filename}`;
+                
+                const playerContent = document.getElementById('player-content');
+                
+                if (type === 'audio') {
+                    playerContent.innerHTML = `
+                        <div class="text-center">
+                            <h3 class="text-xl font-semibold text-white mb-4">${title}</h3>
+                            <audio controls class="w-full max-w-md mx-auto" autoplay>
+                                <source src="${downloadUrl}" type="audio/mpeg">
+                                Seu navegador não suporta o elemento de áudio.
+                            </audio>
+                        </div>
+                    `;
+                } else {
+                    playerContent.innerHTML = `
+                        <div class="text-center">
+                            <h3 class="text-xl font-semibold text-white mb-4">${title}</h3>
+                            <video controls class="w-full max-w-4xl mx-auto rounded-lg" autoplay>
+                                <source src="${downloadUrl}" type="video/mp4">
+                                Seu navegador não suporta o elemento de vídeo.
+                            </video>
+                        </div>
+                    `;
+                }
+                
+                playerModal.classList.add('active');
+            });
+        });
+
+        // Close modals
         document.querySelectorAll('.close-modal-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 responseModal.classList.remove('active');
                 metadataModal.classList.remove('active');
+                playerModal.classList.remove('active');
+                
+                // Stop any playing media
+                const playerContent = document.getElementById('player-content');
+                const audio = playerContent.querySelector('audio');
+                const video = playerContent.querySelector('video');
+                if (audio) audio.pause();
+                if (video) video.pause();
             });
         });
 
+        // Close modals on outside click
+        [responseModal, metadataModal, playerModal].forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                    
+                    // Stop any playing media
+                    const playerContent = document.getElementById('player-content');
+                    const audio = playerContent.querySelector('audio');
+                    const video = playerContent.querySelector('video');
+                    if (audio) audio.pause();
+                    if (video) video.pause();
+                }
+            });
+        });
+
+        // API Test Form
         const apiTestForm = document.getElementById('api-test-form');
         const logContainer = document.getElementById('api-test-log');
 
@@ -247,7 +593,7 @@
                 logContainer.scrollTop = logContainer.scrollHeight;
             }
 
-            addLog('Enviando requisição...');
+            addLog('🚀 Enviando requisição...');
             
             try {
                 const response = await fetch("{{ url_for('test_api') }}", {
@@ -257,16 +603,18 @@
                 });
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.error || 'Erro desconhecido');
-                addLog(`Resposta recebida: ${JSON.stringify(result)}`);
+                
+                addLog(`📥 Resposta recebida: ${JSON.stringify(result)}`);
+                
                 if (result.status === 'processing' && result.task_id) {
-                    addLog(`Tarefa em processamento. ID: ${result.task_id}. Verificando status...`);
+                    addLog(`⏳ Tarefa em processamento. ID: ${result.task_id}. Verificando status...`);
                     pollTaskStatus(result.task_id);
                 } else if (result.status === 'completed') {
-                    addLog('Tarefa concluída com sucesso!', 'success');
-                    addLog(`URL para Download: <a href="${result.result.download_url}" class="text-cyan-400 hover:underline" target="_blank">${result.result.download_url}</a>`);
+                    addLog('✅ Tarefa concluída com sucesso!', 'success');
+                    addLog(`🔗 URL para Download: <a href="${result.result.download_url}" class="text-cyan-400 hover:underline" target="_blank">${result.result.download_url}</a>`);
                 }
             } catch (error) {
-                addLog(`Erro na requisição inicial: ${error.message}`, 'error');
+                addLog(`❌ Erro na requisição inicial: ${error.message}`, 'error');
             }
         });
 
@@ -277,22 +625,25 @@
                     const response = await fetch(taskStatusUrl);
                     const result = await response.json();
                     if (!response.ok) {
-                        addLog(`Erro ao verificar status: ${result.error || 'Erro desconhecido'}`, 'error');
+                        addLog(`❌ Erro ao verificar status: ${result.error || 'Erro desconhecido'}`, 'error');
                         clearInterval(intervalId);
                         return;
                     }
                     if (result.status === 'completed') {
-                        addLog('Tarefa concluída com sucesso!', 'success');
-                        addLog(`URL para Download: <a href="${result.result.download_url}" class="text-cyan-400 hover:underline" target="_blank">${result.result.download_url}</a>`);
+                        addLog('✅ Tarefa concluída com sucesso!', 'success');
+                        addLog(`🔗 URL para Download: <a href="${result.result.download_url}" class="text-cyan-400 hover:underline" target="_blank">${result.result.download_url}</a>`);
                         clearInterval(intervalId);
+                        
+                        // Refresh page to show new file
+                        setTimeout(() => location.reload(), 2000);
                     } else if (result.status === 'failed') {
-                        addLog(`A tarefa falhou: ${result.message}`, 'error');
+                        addLog(`❌ A tarefa falhou: ${result.message}`, 'error');
                         clearInterval(intervalId);
                     } else {
-                        addLog(`Status da tarefa: ${result.status}...`);
+                        addLog(`⏳ Status da tarefa: ${result.status}...`);
                     }
                 } catch (error) {
-                    addLog(`Erro de rede ao verificar status: ${error.message}`, 'error');
+                    addLog(`🌐 Erro de rede ao verificar status: ${error.message}`, 'error');
                     clearInterval(intervalId);
                 }
             }, 3000);

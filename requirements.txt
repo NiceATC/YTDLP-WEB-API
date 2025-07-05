@@ -7,3 +7,6 @@ werkzeug
 Flask-Limiter
 pydantic
 cryptography
+psycopg2-binary
+sqlalchemy
+alembic

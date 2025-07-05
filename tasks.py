@@ -5,6 +5,7 @@ import json
 from celery import Celery
 from yt_dlp import YoutubeDL
 from config import Config
+from services.database_service import DatabaseService
 
 logger = logging.getLogger(__name__)
 celery = Celery(__name__, broker=Config.REDIS_URL, backend=Config.REDIS_URL)
@@ -69,11 +70,14 @@ def process_media(self, url, media_type, quality=None, bitrate=None):
                 logger.error(f"Tarefa {self.request.id}: ERRO CRITICO! O ficheiro processado '{processed_filepath}' nao foi encontrado.")
                 raise FileNotFoundError(f"O ficheiro processado '{processed_filepath}' nao foi encontrado apos o download.")
 
+        # Salva metadados no banco de dados
+        file_size_mb = round(os.path.getsize(output_path) / (1024 * 1024), 2)
+        DatabaseService.save_media_file(output_filename, final_info, media_type, file_size_mb)
+
+        # Remove arquivo de info temporário se existir
         temp_info_path = f"{temp_base_path}.info.json"
         if os.path.exists(temp_info_path):
-            final_info_path = f"{output_path}.info.json"
-            os.rename(temp_info_path, final_info_path)
-            logger.info(f"Tarefa {self.request.id}: Ficheiro de metadados salvo em {final_info_path}")
+            os.remove(temp_info_path)
 
         download_url = f"{Config.BASE_URL}/api/download/{output_filename}"
         logger.info(f"Tarefa {self.request.id}: Concluida com sucesso.")
