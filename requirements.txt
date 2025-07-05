@@ -1,0 +1,9 @@
+flask
+celery
+redis
+yt-dlp
+python-dotenv
+werkzeug
+Flask-Limiter
+pydantic
+cryptography

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentação da API de Mídia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .endpoint-card { transition: all 0.2s ease-in-out; }
+        .endpoint-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <nav class="bg-gray-800/50 backdrop-blur-lg sticky top-0 z-10">
+        <div class="container mx-auto px-8">
+            <div class="flex justify-between items-center py-4">
+                <h1 class="text-2xl font-bold text-cyan-400">API de Mídia</h1>
+                <a href="{{ url_for('login') }}" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                    Acessar Painel
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-8">
+        <header class="text-center mb-16">
+            <h2 class="text-5xl font-bold text-white">Documentação da API</h2>
+            <p class="text-gray-400 mt-4 max-w-2xl mx-auto">Guia completo para utilizar a API de Download de Mídia. A autenticação é feita via header <code class="bg-gray-700 p-1 rounded-md text-xs">X-API-Key</code>.</p>
+        </header>
+
+        <main class="space-y-8">
+            
+            <div class="bg-gray-800 rounded-xl shadow-lg p-6 endpoint-card">
+                <h3 class="text-2xl font-bold mb-4 flex items-center"><span class="bg-green-600 text-white text-sm font-semibold rounded px-2 py-1 mr-3">GET</span>/api/media</h3>
+                <p class="text-gray-400 mb-6">Inicia o processo de download. Responde imediatamente para tarefas longas.</p>
+                
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="text-xl font-semibold mb-2 text-cyan-300">Parâmetros (Query)</h4>
+                        <ul class="list-disc list-inside space-y-2 text-gray-300 mb-6">
+                            <li><code class="bg-gray-700 p-1 rounded">type</code> <span class="text-red-400 font-semibold">(obrigatório)</span>: 'audio' ou 'video'.</li>
+                            <li><code class="bg-gray-700 p-1 rounded">name</code> ou <code class="bg-gray-700 p-1 rounded">url</code> <span class="text-red-400 font-semibold">(obrigatório)</span>: Termo de busca ou URL.</li>
+                            <li><code class="bg-gray-700 p-1 rounded">quality</code> (opcional): Qualidade do vídeo (ex: '720p').</li>
+                            <li><code class="bg-gray-700 p-1 rounded">bitrate</code> (opcional): Bitrate do áudio (ex: '192k').</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-semibold mb-2 text-cyan-300">Exemplo de Uso (cURL)</h4>
+                        <pre class="bg-gray-900 p-4 rounded-lg text-sm text-yellow-300 overflow-x-auto"><code>curl -X GET "http://localhost:25569/api/media?type=audio&name=NOME" \
+-H "X-API-Key: SUA_CHAVE"</code></pre>
+                    </div>
+                </div>
+
+                <h4 class="text-xl font-semibold mt-6 mb-2 text-cyan-300">Respostas Possíveis</h4>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h5 class="font-bold mb-2">Resposta Rápida (200 OK)</h5>
+                        <pre class="bg-gray-900 p-4 rounded-lg text-sm text-green-300 overflow-x-auto"><code>{
+  "status": "completed",
+  "result": {
+    "download_url": "...",
+    "name": "..."
+  }
+}</code></pre>
+                    </div>
+                    <div>
+                        <h5 class="font-bold mb-2">Resposta para Tarefa Longa (202 Accepted)</h5>
+                        <pre class="bg-gray-900 p-4 rounded-lg text-sm text-yellow-300 overflow-x-auto"><code>{
+  "status": "processing",
+  "task_id": "...",
+  "check_status_url": "..."
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-gray-800 rounded-xl shadow-lg p-6 endpoint-card">
+                    <h3 class="text-xl font-bold mb-2 flex items-center"><span class="bg-green-600 text-white text-sm font-semibold rounded px-2 py-1 mr-3">GET</span>/api/tasks/&lt;id&gt;</h3>
+                    <p class="text-gray-400">Verifica o status de uma tarefa em processamento.</p>
+                </div>
+                <div class="bg-gray-800 rounded-xl shadow-lg p-6 endpoint-card">
+                    <h3 class="text-xl font-bold mb-2 flex items-center"><span class="bg-green-600 text-white text-sm font-semibold rounded px-2 py-1 mr-3">GET</span>/api/download/&lt;file&gt;</h3>
+                    <p class="text-gray-400">Baixa o ficheiro finalizado. Endpoint público.</p>
+                </div>
+                <div class="bg-gray-800 rounded-xl shadow-lg p-6 endpoint-card">
+                    <h3 class="text-xl font-bold mb-2 flex items-center"><span class="bg-green-600 text-white text-sm font-semibold rounded px-2 py-1 mr-3">GET</span>/api/health</h3>
+                    <p class="text-gray-400">Verifica a saúde da API e suas dependências.</p>
+                </div>
+            </div>
+        </main>
+
+        <footer class="text-center mt-16 text-gray-500 text-sm">
+             <p>© 2024 - Todos os direitos reservados.</p>
+        </footer>
+    </div>
+</body>
+</html>

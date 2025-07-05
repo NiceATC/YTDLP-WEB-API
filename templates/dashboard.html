@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .sidebar-link.active { background-color: #0891b2; color: white; }
+        .sidebar-link { display: flex; align-items: center; gap: 0.75rem; transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out; }
+        .content-section { display: none; }
+        .content-section.active { display: block; animation: fade-in 0.5s ease-in-out; }
+        @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .modal { display: none; }
+        .modal.active { display: flex; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+    
+    <div id="flash-container" class="fixed top-5 right-5 z-50 w-full max-w-sm">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="p-4 mb-2 rounded-md {{ 'bg-green-500' if category == 'success' else ('bg-red-500' if category == 'error' else 'bg-blue-500') }} text-white text-center shadow-lg" role="alert">
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    </div>
+
+    <!-- Response Modal -->
+    <div id="response-modal" class="modal fixed inset-0 bg-black/60 items-center justify-center z-50">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl"><div class="flex justify-between items-center p-4 border-b border-gray-700"><h3 class="text-xl font-bold">Resposta Completa</h3><button class="close-modal-btn text-gray-400 hover:text-white">&times;</button></div><div class="p-6"><pre id="modal-json-content" class="bg-gray-900 p-4 rounded-md text-sm text-green-300 max-h-96 overflow-auto"></pre></div></div>
+    </div>
+    
+    <!-- Metadata Modal -->
+    <div id="metadata-modal" class="modal fixed inset-0 bg-black/60 items-center justify-center z-50">
+        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl"><div class="flex justify-between items-center p-4 border-b border-gray-700"><h3 class="text-xl font-bold">Detalhes do Ficheiro</h3><button class="close-modal-btn text-gray-400 hover:text-white">&times;</button></div><div id="metadata-modal-content" class="p-6 space-y-4"></div></div>
+    </div>
+
+    {% if force_change %}
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="w-full max-w-md bg-gray-800 rounded-xl shadow-2xl p-8">
+                <h1 class="text-3xl font-bold text-center text-cyan-400 mb-2">Alteração Obrigatória</h1>
+                <p class="text-center text-gray-400 mb-6">Por segurança, altere a senha padrão.</p>
+                <form action="{{ url_for('change_password') }}" method="POST" class="space-y-6">
+                    <div><label for="new_password" class="block text-sm font-medium text-gray-400">Nova Senha</label><input type="password" name="new_password" id="new_password" required class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-cyan-500 focus:border-cyan-500"></div>
+                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500">Salvar Nova Senha</button>
+                </form>
+            </div>
+        </div>
+    {% else %}
+        <div class="flex h-screen">
+            <aside class="w-64 bg-gray-800 p-6 flex flex-col justify-between shadow-lg">
+                <div>
+                    <h1 class="text-2xl font-bold text-cyan-400 mb-8">Painel Admin</h1>
+                    <nav id="sidebar-nav" class="flex flex-col space-y-2">
+                        <a href="#tester" class="sidebar-link p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white"><i class="fa-solid fa-vial w-6 text-center"></i><span>Testar API</span></a>
+                        <a href="#history" class="sidebar-link p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white"><i class="fa-solid fa-clock-rotate-left w-6 text-center"></i><span>Histórico</span></a>
+                        <a href="#files" class="sidebar-link p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white"><i class="fa-solid fa-folder-open w-6 text-center"></i><span>Arquivos</span></a>
+                        <a href="#settings" class="sidebar-link p-3 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-white"><i class="fa-solid fa-gear w-6 text-center"></i><span>Configurações</span></a>
+                    </nav>
+                </div>
+                <a href="{{ url_for('logout') }}" class="sidebar-link justify-center text-center py-3 px-4 rounded-lg bg-red-600/80 hover:bg-red-700"><i class="fa-solid fa-right-from-bracket w-6 text-center"></i><span>Sair</span></a>
+            </aside>
+
+            <main class="flex-1 p-10 overflow-y-auto">
+                <section id="tester" class="content-section">
+                    <h2 class="text-4xl font-bold mb-6 text-cyan-300">Testar API</h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="bg-gray-800 p-6 rounded-lg shadow-md">
+                            <form id="api-test-form" class="space-y-4">
+                                <div><label for="url" class="block text-sm font-medium text-gray-400">URL ou Nome</label><input type="text" name="url" id="url" placeholder="URL do vídeo ou nome para busca" class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white"></div>
+                                <div><label for="type" class="block text-sm font-medium text-gray-400">Tipo</label><select name="type" id="type" class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white"><option value="audio">Áudio</option><option value="video">Vídeo</option></select></div>
+                                <div><label for="quality" class="block text-sm font-medium text-gray-400">Qualidade (Vídeo)</label><input type="text" name="quality" id="quality" placeholder="Ex: 720p (opcional)" class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white"></div>
+                                <div><label for="bitrate" class="block text-sm font-medium text-gray-400">Bitrate (Áudio)</label><input type="text" name="bitrate" id="bitrate" placeholder="Ex: 192k (opcional)" class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white"></div>
+                                <button type="submit" class="w-full py-3 px-4 rounded-md text-white font-semibold bg-cyan-600 hover:bg-cyan-700 flex items-center justify-center space-x-2"><i class="fa-solid fa-paper-plane"></i><span>Enviar Requisição</span></button>
+                            </form>
+                        </div>
+                        <div class="bg-gray-800 p-6 rounded-lg shadow-md"><h3 class="text-xl font-semibold mb-4">Log da Requisição</h3><div id="api-test-log" class="bg-gray-900 rounded-md p-4 h-80 overflow-y-auto font-mono text-sm"><p class="text-gray-500">Aguardando requisição...</p></div></div>
+                    </div>
+                </section>
+                
+                <section id="history" class="content-section">
+                    <h2 class="text-4xl font-bold mb-6 text-cyan-300">Histórico de Requisições</h2>
+                     <div class="bg-gray-800 rounded-lg shadow-md overflow-hidden"><div class="overflow-x-auto max-h-[75vh]"><table class="table-auto w-full text-left">
+                        <thead class="bg-gray-700 sticky top-0"><tr><th class="p-4">Timestamp</th><th class="p-4">Requisição</th><th class="p-4">Status</th><th class="p-4">Ação</th></tr></thead>
+                        <tbody>
+                            {% for item in history %}<tr class="border-t border-gray-700 hover:bg-gray-700/50">
+                                <td class="p-4 align-top text-sm text-gray-400">{{ item.timestamp }}</td>
+                                <td class="p-4 align-top"><p class="font-semibold">{{ item.request.type | capitalize }}</p><p class="text-xs text-gray-400 truncate w-64">{{ item.request.url or item.request.name }}</p></td>
+                                <td class="p-4 align-top">
+                                    {% if item.response.status == 'completed' %}<span class="px-2 py-1 text-xs font-semibold text-green-100 bg-green-600 rounded-full">Concluído</span>
+                                    {% elif item.response.status == 'processing' %}<span class="px-2 py-1 text-xs font-semibold text-yellow-100 bg-yellow-600 rounded-full">Processando</span>
+                                    {% else %}<span class="px-2 py-1 text-xs font-semibold text-red-100 bg-red-600 rounded-full">Falhou</span>{% endif %}
+                                </td>
+                                <td class="p-4 align-top"><button class="view-response-btn text-cyan-400 hover:underline" data-response='{{ item.response | tojson }}'>Ver Resposta</button></td>
+                            </tr>
+                            {% else %}<tr><td colspan="4" class="text-center py-4">Nenhum histórico encontrado.</td></tr>{% endfor %}
+                        </tbody>
+                    </table></div></div>
+                </section>
+
+                <section id="files" class="content-section">
+                    <h2 class="text-4xl font-bold mb-6 text-cyan-300">Arquivos Baixados</h2>
+                    <div class="bg-gray-800 rounded-lg shadow-md overflow-hidden"><div class="overflow-x-auto max-h-[75vh]"><table class="table-auto w-full text-left">
+                        <thead class="bg-gray-700 sticky top-0"><tr><th class="p-4"></th><th class="p-4">Título</th><th class="p-4">Tamanho</th><th class="p-4">Ações</th></tr></thead>
+                        <tbody>
+                            {% for file in files %}<tr class="border-t border-gray-700 hover:bg-gray-700/50">
+                                <td class="p-2"><img src="{{ file.metadata.thumbnail }}" alt="Thumbnail" class="w-32 h-18 object-cover rounded-md"></td>
+                                <td class="p-4 align-top"><p class="font-semibold">{{ file.metadata.title }}</p><p class="text-xs text-gray-400">{{ file.metadata.uploader }}</p></td>
+                                <td class="p-4 align-top">{{ file.size_mb }} MB</td>
+                                <td class="p-4 align-top space-x-4">
+                                    <a href="{{ url_for('download_file', filename=file.name) }}" target="_blank" class="text-cyan-400 hover:underline">Baixar</a>
+                                    <button class="view-metadata-btn text-blue-400 hover:underline" data-metadata='{{ file.metadata | tojson }}'>Detalhes</button>
+                                </td>
+                            </tr>
+                            {% else %}<tr><td colspan="4" class="text-center py-4">Nenhum ficheiro encontrado.</td></tr>{% endfor %}
+                        </tbody>
+                    </table></div></div>
+                </section>
+
+                <section id="settings" class="content-section">
+                    <h2 class="text-4xl font-bold mb-6 text-cyan-300">Configurações</h2>
+                    <div class="space-y-12">
+                        <div class="bg-gray-800 p-6 rounded-lg shadow-md"><h3 class="text-2xl font-semibold mb-4 border-b border-gray-700 pb-2">Gerais</h3>
+                            <form action="{{ url_for('update_settings') }}" method="POST" class="space-y-4">
+                                <div><label for="rate_limit" class="block text-sm font-medium text-gray-400">Limite de Requisições</label><input type="text" name="rate_limit" id="rate_limit" value="{{ settings.DEFAULT_RATE_LIMIT }}" class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white"></div>
+                                <div><label for="timeout" class="block text-sm font-medium text-gray-400">Timeout da Resposta Direta (segundos)</label><input type="number" name="timeout" id="timeout" value="{{ settings.TASK_COMPLETION_TIMEOUT }}" class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white"></div>
+                                <button type="submit" class="w-full md:w-auto py-2 px-6 rounded-md text-white font-semibold bg-cyan-600 hover:bg-cyan-700">Salvar Gerais</button>
+                            </form>
+                        </div>
+                        <div class="bg-gray-800 p-6 rounded-lg shadow-md"><h3 class="text-2xl font-semibold mb-4 border-b border-gray-700 pb-2">Chaves de API</h3>
+                            <div class="space-y-3 mb-4">
+                                {% for key in settings.VALID_API_KEYS %}<div class="flex items-center justify-between bg-gray-700 p-3 rounded-md"><span class="font-mono text-sm">{{ key }}</span><form action="{{ url_for('delete_api_key') }}" method="POST" onsubmit="return confirm('Tem a certeza que quer apagar esta chave?');"><input type="hidden" name="api_key" value="{{ key }}"><button type="submit" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button></form></div>
+                                {% else %}<p class="text-gray-500">Nenhuma chave de API configurada.</p>{% endfor %}
+                            </div>
+                            <form action="{{ url_for('new_api_key') }}" method="POST"><button type="submit" class="w-full md:w-auto py-2 px-6 rounded-md text-white font-semibold bg-green-600 hover:bg-green-700">Gerar Nova Chave</button></form>
+                        </div>
+                        <div class="bg-gray-800 p-6 rounded-lg shadow-md border border-red-500/50"><h3 class="text-2xl font-semibold mb-4 text-red-400 border-b border-red-500/50 pb-2">Zona de Perigo</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div><h4 class="font-semibold mb-2">Alterar Senha</h4><form action="{{ url_for('change_password') }}" method="POST" class="space-y-4"><div><label for="new_password_dash" class="block text-sm font-medium text-gray-400">Nova Senha</label><input type="password" name="new_password" id="new_password_dash" required class="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white"></div><button type="submit" class="w-full py-2 px-4 rounded-md text-white bg-yellow-600 hover:bg-yellow-700">Salvar Senha</button></form></div>
+                                <div><h4 class="font-semibold mb-2">Ficheiro de Cookies</h4>
+                                    <div class="flex items-center space-x-4">
+                                        <form action="{{ url_for('upload_cookies') }}" method="POST" enctype="multipart/form-data" class="flex-1">
+                                            <label for="cookie_file" class="w-full cursor-pointer text-center block py-2 px-4 rounded-md text-white bg-cyan-600 hover:bg-cyan-700">Substituir Ficheiro</label>
+                                            <input type="file" name="cookie_file" id="cookie_file" class="hidden" onchange="this.form.submit()">
+                                        </form>
+                                        {% if cookie_file_exists %}
+                                        <form action="{{ url_for('delete_cookie_file') }}" method="POST" onsubmit="return confirm('Tem a certeza que quer apagar o ficheiro de cookies?');">
+                                            <button type="submit" class="py-2 px-4 rounded-md text-white bg-red-600 hover:bg-red-700"><i class="fa-solid fa-trash"></i></button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    {% endif %}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const sections = document.querySelectorAll('.content-section');
+        const navLinks = document.querySelectorAll('#sidebar-nav a');
+        const responseModal = document.getElementById('response-modal');
+        const metadataModal = document.getElementById('metadata-modal');
+
+        function showSection(hash) {
+            sections.forEach(section => section.classList.remove('active'));
+            navLinks.forEach(link => link.classList.remove('active'));
+            const targetSection = document.querySelector(hash);
+            const targetLink = document.querySelector(`#sidebar-nav a[href="${hash}"]`);
+            if (targetSection) targetSection.classList.add('active');
+            if (targetLink) targetLink.classList.add('active');
+        }
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => { window.location.hash = e.currentTarget.getAttribute('href'); });
+        });
+
+        window.addEventListener('hashchange', () => showSection(window.location.hash || '#tester'));
+        
+        const initialHash = window.location.hash || '#tester';
+        window.location.hash = initialHash;
+        showSection(initialHash);
+        
+        setTimeout(() => {
+            const flashContainer = document.getElementById('flash-container');
+            if (flashContainer) {
+                flashContainer.style.transition = 'opacity 0.5s ease';
+                flashContainer.style.opacity = '0';
+                setTimeout(() => flashContainer.remove(), 500);
+            }
+        }, 5000);
+
+        document.querySelectorAll('.view-response-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const responseData = JSON.parse(button.dataset.response);
+                document.getElementById('modal-json-content').textContent = JSON.stringify(responseData, null, 2);
+                responseModal.classList.add('active');
+            });
+        });
+        
+        document.querySelectorAll('.view-metadata-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const metadata = JSON.parse(button.dataset.metadata);
+                const contentEl = document.getElementById('metadata-modal-content');
+                contentEl.innerHTML = `
+                    <p><strong>Título:</strong> ${metadata.title}</p>
+                    <p><strong>Autor:</strong> ${metadata.uploader}</p>
+                    <p><strong>Duração:</strong> ${metadata.duration_string}</p>
+                    <p><strong>Visualizações:</strong> ${new Intl.NumberFormat().format(metadata.view_count)}</p>
+                    <p><strong>Gostos:</strong> ${new Intl.NumberFormat().format(metadata.like_count)}</p>
+                    <p><strong>Data de Upload:</strong> ${metadata.upload_date}</p>
+                    <p><strong>URL Original:</strong> <a href="${metadata.webpage_url}" target="_blank" class="text-cyan-400 hover:underline">Link</a></p>
+                    <div class="mt-4"><strong class="block mb-2">Descrição:</strong><p class="text-sm text-gray-400 max-h-40 overflow-y-auto">${metadata.description.replace(/\n/g, '<br>')}</p></div>
+                `;
+                metadataModal.classList.add('active');
+            });
+        });
+
+        document.querySelectorAll('.close-modal-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                responseModal.classList.remove('active');
+                metadataModal.classList.remove('active');
+            });
+        });
+
+        const apiTestForm = document.getElementById('api-test-form');
+        const logContainer = document.getElementById('api-test-log');
+
+        apiTestForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            logContainer.innerHTML = '';
+            const formData = new FormData(apiTestForm);
+            const data = Object.fromEntries(formData.entries());
+
+            function addLog(message, type = 'info') {
+                const color = type === 'error' ? 'text-red-400' : (type === 'success' ? 'text-green-400' : 'text-gray-400');
+                logContainer.innerHTML += `<p class="${color}"><span class="text-gray-500">[${new Date().toLocaleTimeString()}]</span> ${message}</p>`;
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+
+            addLog('Enviando requisição...');
+            
+            try {
+                const response = await fetch("{{ url_for('test_api') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Erro desconhecido');
+                addLog(`Resposta recebida: ${JSON.stringify(result)}`);
+                if (result.status === 'processing' && result.task_id) {
+                    addLog(`Tarefa em processamento. ID: ${result.task_id}. Verificando status...`);
+                    pollTaskStatus(result.task_id);
+                } else if (result.status === 'completed') {
+                    addLog('Tarefa concluída com sucesso!', 'success');
+                    addLog(`URL para Download: <a href="${result.result.download_url}" class="text-cyan-400 hover:underline" target="_blank">${result.result.download_url}</a>`);
+                }
+            } catch (error) {
+                addLog(`Erro na requisição inicial: ${error.message}`, 'error');
+            }
+        });
+
+        async function pollTaskStatus(taskId) {
+            const taskStatusUrl = `/api/tasks/${taskId}`;
+            const intervalId = setInterval(async () => {
+                try {
+                    const response = await fetch(taskStatusUrl);
+                    const result = await response.json();
+                    if (!response.ok) {
+                        addLog(`Erro ao verificar status: ${result.error || 'Erro desconhecido'}`, 'error');
+                        clearInterval(intervalId);
+                        return;
+                    }
+                    if (result.status === 'completed') {
+                        addLog('Tarefa concluída com sucesso!', 'success');
+                        addLog(`URL para Download: <a href="${result.result.download_url}" class="text-cyan-400 hover:underline" target="_blank">${result.result.download_url}</a>`);
+                        clearInterval(intervalId);
+                    } else if (result.status === 'failed') {
+                        addLog(`A tarefa falhou: ${result.message}`, 'error');
+                        clearInterval(intervalId);
+                    } else {
+                        addLog(`Status da tarefa: ${result.status}...`);
+                    }
+                } catch (error) {
+                    addLog(`Erro de rede ao verificar status: ${error.message}`, 'error');
+                    clearInterval(intervalId);
+                }
+            }, 3000);
+        }
+    });
+    </script>
+</body>
+</html>
