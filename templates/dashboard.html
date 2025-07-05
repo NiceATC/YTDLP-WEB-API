@@ -25,6 +25,10 @@
         .progress-bar { background: linear-gradient(90deg, #06b6d4 0%, #0891b2 100%); }
         .volume-slider::-webkit-slider-thumb { background: #06b6d4; }
         .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+        .cookie-status { padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500; }
+        .cookie-status.valid { background-color: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .cookie-status.invalid { background-color: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .cookie-status.none { background-color: rgba(156, 163, 175, 0.2); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.3); }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-200 gradient-bg">
@@ -133,6 +137,32 @@
                     <div class="mb-8">
                         <h2 class="text-4xl font-bold text-cyan-300 mb-2">Testar API</h2>
                         <p class="text-gray-400">Teste a funcionalidade da API de download de mídia</p>
+                    </div>
+                    
+                    <!-- Status dos Cookies -->
+                    <div class="mb-6">
+                        <div class="glass-effect p-4 rounded-lg">
+                            <h3 class="text-lg font-semibold mb-3 text-cyan-300">
+                                <i class="fas fa-cookie-bite mr-2"></i>Status dos Cookies
+                            </h3>
+                            <div class="flex items-center space-x-4">
+                                {% if cookie_file_exists %}
+                                    <span class="cookie-status valid">
+                                        <i class="fas fa-check-circle mr-1"></i>Cookies Carregados
+                                    </span>
+                                    <span class="text-sm text-gray-400">
+                                        Arquivo de cookies disponível para autenticação
+                                    </span>
+                                {% else %}
+                                    <span class="cookie-status none">
+                                        <i class="fas fa-exclamation-triangle mr-1"></i>Sem Cookies
+                                    </span>
+                                    <span class="text-sm text-gray-400">
+                                        Alguns vídeos podem requerer autenticação
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -396,9 +426,9 @@
                                     <div class="space-y-4">
                                         <form action="{{ url_for('upload_cookies') }}" method="POST" enctype="multipart/form-data">
                                             <label for="cookie_file" class="w-full cursor-pointer text-center block py-3 px-4 rounded-lg text-white bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 transition-all">
-                                                <i class="fas fa-upload mr-2"></i>Substituir Ficheiro
+                                                <i class="fas fa-upload mr-2"></i>{{ 'Substituir Ficheiro' if cookie_file_exists else 'Carregar Ficheiro' }}
                                             </label>
-                                            <input type="file" name="cookie_file" id="cookie_file" class="hidden" onchange="this.form.submit()">
+                                            <input type="file" name="cookie_file" id="cookie_file" class="hidden" accept=".txt" onchange="this.form.submit()">
                                         </form>
                                         
                                         {% if cookie_file_exists %}
@@ -647,6 +677,12 @@
                     clearInterval(intervalId);
                 }
             }, 3000);
+        }
+
+        function addLog(message, type = 'info') {
+            const color = type === 'error' ? 'text-red-400' : (type === 'success' ? 'text-green-400' : 'text-gray-400');
+            logContainer.innerHTML += `<p class="${color}"><span class="text-gray-500">[${new Date().toLocaleTimeString()}]</span> ${message}</p>`;
+            logContainer.scrollTop = logContainer.scrollHeight;
         }
     });
     </script>

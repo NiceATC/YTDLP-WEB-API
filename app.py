@@ -50,14 +50,27 @@ def setup_initial_data():
 
 setup_initial_data()
 
-def write_cookie_file_if_exists():
-    """Escreve o arquivo de cookies do banco para o filesystem se existir"""
-    cookie_file = DatabaseService.get_cookie_file()
-    if cookie_file:
-        with open('cookies.txt', 'wb') as f:
-            f.write(cookie_file.content)
-        return True
-    return False
+def ensure_cookie_file_exists():
+    """Garante que o arquivo de cookies existe no filesystem se estiver no banco"""
+    try:
+        cookie_file = DatabaseService.get_cookie_file()
+        if cookie_file:
+            cookies_path = os.path.join(os.getcwd(), 'cookies.txt')
+            # Sempre reescreve o arquivo para garantir que está atualizado
+            with open(cookies_path, 'wb') as f:
+                f.write(cookie_file.content)
+            logging.info(f"Arquivo de cookies escrito em: {cookies_path}")
+            return True
+        else:
+            # Remove arquivo se não há cookies no banco
+            cookies_path = os.path.join(os.getcwd(), 'cookies.txt')
+            if os.path.exists(cookies_path):
+                os.remove(cookies_path)
+                logging.info("Arquivo de cookies removido (não há cookies no banco)")
+        return False
+    except Exception as e:
+        logging.error(f"Erro ao escrever arquivo de cookies: {e}")
+        return False
 
 def get_downloaded_files():
     """Retorna arquivos baixados do banco de dados"""
@@ -166,8 +179,10 @@ def delete_api_key():
 def delete_cookie_file():
     if DatabaseService.delete_cookie_file():
         # Remove também do filesystem
-        if os.path.exists('cookies.txt'):
-            os.remove('cookies.txt')
+        cookies_path = os.path.join(os.getcwd(), 'cookies.txt')
+        if os.path.exists(cookies_path):
+            os.remove(cookies_path)
+            logging.info("Arquivo de cookies removido do filesystem")
         flash('Ficheiro de cookies removido com sucesso.', 'success')
     else:
         flash('Nenhum ficheiro de cookies para remover.', 'info')
@@ -182,6 +197,9 @@ def test_api():
     
     api_key = api_keys[0].key
     form_data = request.json
+    
+    # Garante que o arquivo de cookies está disponível antes do teste
+    ensure_cookie_file_exists()
     
     with app.test_client() as client:
         response = client.get('/api/media', query_string=form_data, headers={'X-API-Key': api_key})
@@ -205,14 +223,29 @@ def upload_cookies():
     
     file = request.files['cookie_file']
     if file and file.filename != '':
-        content = file.read()
-        DatabaseService.save_cookie_file(content, secure_filename(file.filename))
-        
-        # Escreve também no filesystem para uso imediato
-        with open('cookies.txt', 'wb') as f:
-            f.write(content)
-        
-        flash('Ficheiro de cookies atualizado com sucesso!', 'success')
+        try:
+            content = file.read()
+            
+            # Valida se o conteúdo parece ser um arquivo de cookies válido
+            content_str = content.decode('utf-8', errors='ignore')
+            if not content_str.strip():
+                flash('Arquivo de cookies está vazio.', 'error')
+                return redirect(url_for('admin_dashboard') + '#settings')
+            
+            # Salva no banco de dados
+            DatabaseService.save_cookie_file(content, secure_filename(file.filename))
+            
+            # Escreve imediatamente no filesystem
+            cookies_path = os.path.join(os.getcwd(), 'cookies.txt')
+            with open(cookies_path, 'wb') as f:
+                f.write(content)
+            
+            logging.info(f"Arquivo de cookies salvo: {len(content)} bytes em {cookies_path}")
+            flash('Ficheiro de cookies atualizado com sucesso!', 'success')
+            
+        except Exception as e:
+            logging.error(f"Erro ao processar arquivo de cookies: {e}")
+            flash(f'Erro ao processar arquivo: {str(e)}', 'error')
     else:
         flash('Nenhum ficheiro selecionado.', 'error')
     
@@ -260,12 +293,26 @@ def health_check():
     except:
         db_status = 'error'
     
-    status = 'ok' if redis_status == 'ok' and db_status == 'ok' else 'error'
+    # Verifica se o arquivo de cookies está sincronizado
+    cookie_status = 'ok'
+    try:
+        cookie_file = DatabaseService.get_cookie_file()
+        cookies_path = os.path.join(os.getcwd(), 'cookies.txt')
+        
+        if cookie_file and not os.path.exists(cookies_path):
+            cookie_status = 'needs_sync'
+        elif not cookie_file and os.path.exists(cookies_path):
+            cookie_status = 'orphaned_file'
+    except:
+        cookie_status = 'error'
+    
+    status = 'ok' if redis_status == 'ok' and db_status == 'ok' and cookie_status == 'ok' else 'warning'
     return jsonify({
         'status': status, 
         'dependencies': {
             'redis': redis_status,
-            'database': db_status
+            'database': db_status,
+            'cookies': cookie_status
         }
     }), 200 if status == 'ok' else 503
 
@@ -279,8 +326,8 @@ def download_media():
     except ValidationError as e:
         return jsonify({'error': 'Dados de entrada inválidos', 'details': e.errors()}), 400
     
-    # Escreve arquivo de cookies se existir no banco
-    write_cookie_file_if_exists()
+    # CRÍTICO: Garante que o arquivo de cookies está sempre disponível
+    ensure_cookie_file_exists()
     
     task = process_media.delay(data.url, data.type, data.quality, data.bitrate)
     timeout = Config.get_settings().get("TASK_COMPLETION_TIMEOUT", 60)
@@ -327,4 +374,6 @@ def download_file(filename):
     return send_from_directory(app.config['DOWNLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
+    # Garante que o arquivo de cookies está disponível na inicialização
+    ensure_cookie_file_exists()
     app.run(host='0.0.0.0', port=Config.FLASK_RUN_PORT)

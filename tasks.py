@@ -10,6 +10,21 @@ from services.database_service import DatabaseService
 logger = logging.getLogger(__name__)
 celery = Celery(__name__, broker=Config.REDIS_URL, backend=Config.REDIS_URL)
 
+def ensure_cookies_available():
+    """Garante que o arquivo de cookies está disponível para o yt-dlp"""
+    try:
+        cookie_file = DatabaseService.get_cookie_file()
+        if cookie_file:
+            cookies_path = os.path.join(os.getcwd(), 'cookies.txt')
+            with open(cookies_path, 'wb') as f:
+                f.write(cookie_file.content)
+            logger.info(f"Arquivo de cookies disponibilizado para yt-dlp: {cookies_path}")
+            return cookies_path
+        return None
+    except Exception as e:
+        logger.error(f"Erro ao preparar arquivo de cookies: {e}")
+        return None
+
 @celery.task(bind=True)
 def process_media(self, url, media_type, quality=None, bitrate=None):
     try:
@@ -28,8 +43,13 @@ def process_media(self, url, media_type, quality=None, bitrate=None):
             'writeinfojson': True,
         }
         
-        if os.path.exists('cookies.txt'):
-            ydl_opts['cookiefile'] = 'cookies.txt'
+        # CRÍTICO: Sempre verifica e prepara o arquivo de cookies antes do download
+        cookies_path = ensure_cookies_available()
+        if cookies_path and os.path.exists(cookies_path):
+            ydl_opts['cookiefile'] = cookies_path
+            logger.info(f"Tarefa {self.request.id}: Usando arquivo de cookies: {cookies_path}")
+        else:
+            logger.warning(f"Tarefa {self.request.id}: Nenhum arquivo de cookies disponível")
 
         if is_audio:
             logger.info(f"Tarefa {self.request.id}: Configurando para download e conversao de audio para MP3.")
@@ -44,6 +64,8 @@ def process_media(self, url, media_type, quality=None, bitrate=None):
             final_extension = '.mp4'
 
         logger.info(f"Tarefa {self.request.id}: Iniciando download e processamento com yt-dlp...")
+        logger.info(f"Tarefa {self.request.id}: Opções do yt-dlp: {json.dumps(ydl_opts, indent=2)}")
+        
         with YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
         logger.info(f"Tarefa {self.request.id}: Processamento do yt-dlp concluido.")
