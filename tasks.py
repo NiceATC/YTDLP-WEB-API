@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 celery = Celery(__name__, broker=Config.REDIS_URL, backend=Config.REDIS_URL)
 
 @celery.task(bind=True)
-def process_media(self, search_query, media_type, quality=None, bitrate=None):
+def process_media(self, url, media_type, quality=None, bitrate=None):
     try:
-        logger.info(f"Iniciando tarefa {self.request.id}: tipo={media_type}, query='{search_query}'")
+        logger.info(f"Iniciando tarefa {self.request.id}: tipo={media_type}, url='{url}'")
         
         if not os.path.exists(Config.DOWNLOAD_FOLDER):
             os.makedirs(Config.DOWNLOAD_FOLDER)
@@ -44,10 +44,11 @@ def process_media(self, search_query, media_type, quality=None, bitrate=None):
 
         logger.info(f"Tarefa {self.request.id}: Iniciando download e processamento com yt-dlp...")
         with YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(search_query, download=True)
+            info_dict = ydl.extract_info(url, download=True)
         logger.info(f"Tarefa {self.request.id}: Processamento do yt-dlp concluido.")
 
-        final_info = info_dict['entries'][0] if 'entries' in info_dict else info_dict
+        # Como agora só usamos URLs diretas, não precisamos verificar 'entries'
+        final_info = info_dict
 
         processed_filepath = f"{temp_base_path}{final_extension}"
         output_filename = f"{uuid.uuid4()}{final_extension}"

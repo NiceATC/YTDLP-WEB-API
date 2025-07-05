@@ -263,15 +263,22 @@ def logout():
     return redirect(url_for('login'))
 
 class MediaRequest(BaseModel):
-    type: str; url: Optional[str] = None; name: Optional[str] = None; quality: Optional[str] = None; bitrate: Optional[str] = None
+    type: str
+    url: str
+    quality: Optional[str] = None
+    bitrate: Optional[str] = None
+    
     @validator('type')
     def type_must_be_valid(cls, v):
-        if v.lower() not in ['audio', 'video']: raise ValueError("Tipo deve ser 'audio' ou 'video'")
+        if v.lower() not in ['audio', 'video']:
+            raise ValueError("Tipo deve ser 'audio' ou 'video'")
         return v.lower()
-    @validator('name')
-    def url_or_name_must_exist(cls, v, values):
-        if not values.get('url') and not v: raise ValueError('URL ou nome é obrigatório')
-        return v
+    
+    @validator('url')
+    def url_must_be_provided(cls, v):
+        if not v or not v.strip():
+            raise ValueError('URL é obrigatória')
+        return v.strip()
 
 @app.route('/')
 def documentation():
@@ -295,8 +302,7 @@ def download_media():
     except ValidationError as e:
         return jsonify({'error': 'Dados de entrada inválidos', 'details': e.errors()}), 400
     
-    search_query = data.url if data.url else f"ytsearch:{data.name}"
-    task = process_media.delay(search_query, data.type, data.quality, data.bitrate)
+    task = process_media.delay(data.url, data.type, data.quality, data.bitrate)
     timeout = Config.get_settings().get("TASK_COMPLETION_TIMEOUT", 60)
 
     try:

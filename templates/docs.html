@@ -35,21 +35,21 @@
             
             <div class="bg-gray-800 rounded-xl shadow-lg p-6 endpoint-card">
                 <h3 class="text-2xl font-bold mb-4 flex items-center"><span class="bg-green-600 text-white text-sm font-semibold rounded px-2 py-1 mr-3">GET</span>/api/media</h3>
-                <p class="text-gray-400 mb-6">Inicia o processo de download. Responde imediatamente para tarefas longas.</p>
+                <p class="text-gray-400 mb-6">Inicia o processo de download de mídia a partir de uma URL.</p>
                 
                 <div class="grid md:grid-cols-2 gap-8">
                     <div>
                         <h4 class="text-xl font-semibold mb-2 text-cyan-300">Parâmetros (Query)</h4>
                         <ul class="list-disc list-inside space-y-2 text-gray-300 mb-6">
                             <li><code class="bg-gray-700 p-1 rounded">type</code> <span class="text-red-400 font-semibold">(obrigatório)</span>: 'audio' ou 'video'.</li>
-                            <li><code class="bg-gray-700 p-1 rounded">name</code> ou <code class="bg-gray-700 p-1 rounded">url</code> <span class="text-red-400 font-semibold">(obrigatório)</span>: Termo de busca ou URL.</li>
+                            <li><code class="bg-gray-700 p-1 rounded">url</code> <span class="text-red-400 font-semibold">(obrigatório)</span>: URL do vídeo para download.</li>
                             <li><code class="bg-gray-700 p-1 rounded">quality</code> (opcional): Qualidade do vídeo (ex: '720p').</li>
                             <li><code class="bg-gray-700 p-1 rounded">bitrate</code> (opcional): Bitrate do áudio (ex: '192k').</li>
                         </ul>
                     </div>
                     <div>
                         <h4 class="text-xl font-semibold mb-2 text-cyan-300">Exemplo de Uso (cURL)</h4>
-                        <pre class="bg-gray-900 p-4 rounded-lg text-sm text-yellow-300 overflow-x-auto"><code>curl -X GET "http://localhost:25569/api/media?type=audio&name=NOME" \
+                        <pre class="bg-gray-900 p-4 rounded-lg text-sm text-yellow-300 overflow-x-auto"><code>curl -X GET "http://localhost:25569/api/media?type=audio&url=https://www.youtube.com/watch?v=dQw4w9WgXcQ" \
 -H "X-API-Key: SUA_CHAVE"</code></pre>
                     </div>
                 </div>
@@ -62,7 +62,8 @@
   "status": "completed",
   "result": {
     "download_url": "...",
-    "name": "..."
+    "title": "...",
+    "uploader": "..."
   }
 }</code></pre>
                     </div>
@@ -79,11 +80,11 @@
 
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <div class="bg-gray-800 rounded-xl shadow-lg p-6 endpoint-card">
-                    <h3 class="text-xl font-bold mb-2 flex items-center"><span class="bg-green-600 text-white text-sm font-semibold rounded px-2 py-1 mr-3">GET</span>/api/tasks/&lt;id&gt;</h3>
+                    <h3 class="text-xl font-bold mb-2 flex items-center"><span class="bg-green-600 text-white text-sm font-semibold rounded px-2 py-1 mr-3">GET</span>/api/tasks/<id></h3>
                     <p class="text-gray-400">Verifica o status de uma tarefa em processamento.</p>
                 </div>
                 <div class="bg-gray-800 rounded-xl shadow-lg p-6 endpoint-card">
-                    <h3 class="text-xl font-bold mb-2 flex items-center"><span class="bg-green-600 text-white text-sm font-semibold rounded px-2 py-1 mr-3">GET</span>/api/download/&lt;file&gt;</h3>
+                    <h3 class="text-xl font-bold mb-2 flex items-center"><span class="bg-green-600 text-white text-sm font-semibold rounded px-2 py-1 mr-3">GET</span>/api/download/<file></h3>
                     <p class="text-gray-400">Baixa o ficheiro finalizado. Endpoint público.</p>
                 </div>
                 <div class="bg-gray-800 rounded-xl shadow-lg p-6 endpoint-card">
