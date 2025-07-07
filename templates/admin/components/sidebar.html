@@ -1,0 +1,34 @@
+<!-- Sidebar Component -->
+<aside class="w-64 glass-effect p-6 flex flex-col justify-between shadow-2xl">
+    <div>
+        <h1 class="text-2xl font-bold text-cyan-400 mb-8 text-center">
+            <i class="fas fa-download mr-2"></i>Painel Admin
+        </h1>
+        <nav id="sidebar-nav" class="flex flex-col space-y-2">
+            <a href="#overview" class="sidebar-link p-3 rounded-lg text-gray-300">
+                <i class="fa-solid fa-chart-line w-6 text-center"></i>
+                <span>Visão Geral</span>
+            </a>
+            <a href="#tester" class="sidebar-link p-3 rounded-lg text-gray-300">
+                <i class="fa-solid fa-vial w-6 text-center"></i>
+                <span>Testar API</span>
+            </a>
+            <a href="#history" class="sidebar-link p-3 rounded-lg text-gray-300">
+                <i class="fa-solid fa-clock-rotate-left w-6 text-center"></i>
+                <span>Histórico</span>
+            </a>
+            <a href="#files" class="sidebar-link p-3 rounded-lg text-gray-300">
+                <i class="fa-solid fa-folder-open w-6 text-center"></i>
+                <span>Arquivos</span>
+            </a>
+            <a href="#settings" class="sidebar-link p-3 rounded-lg text-gray-300">
+                <i class="fa-solid fa-gear w-6 text-center"></i>
+                <span>Configurações</span>
+            </a>
+        </nav>
+    </div>
+    <a href="{{ url_for('auth.logout') }}" class="sidebar-link justify-center text-center py-3 px-4 rounded-lg bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition-all">
+        <i class="fa-solid fa-right-from-bracket w-6 text-center"></i>
+        <span>Sair</span>
+    </a>
+</aside>

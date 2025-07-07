@@ -1,0 +1,75 @@
+<!-- API Tester Section -->
+<section id="tester" class="content-section">
+    <div class="mb-8">
+        <h2 class="text-4xl font-bold text-cyan-300 mb-2">Testar API</h2>
+        <p class="text-gray-400">Teste a funcionalidade da API de download de mídia</p>
+    </div>
+    
+    <!-- Status dos Cookies -->
+    <div class="mb-6">
+        <div class="glass-effect p-4 rounded-lg">
+            <h3 class="text-lg font-semibold mb-3 text-cyan-300">
+                <i class="fas fa-cookie-bite mr-2"></i>Status dos Cookies
+            </h3>
+            <div class="flex items-center space-x-4">
+                {% if cookie_file_exists %}
+                    <span class="cookie-status valid">
+                        <i class="fas fa-check-circle mr-1"></i>Cookies Carregados
+                    </span>
+                    <span class="text-sm text-gray-400">
+                        Arquivo de cookies disponível para autenticação
+                    </span>
+                {% else %}
+                    <span class="cookie-status none">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>Sem Cookies
+                    </span>
+                    <span class="text-sm text-gray-400">
+                        Alguns vídeos podem requerer autenticação
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="glass-effect p-6 rounded-xl shadow-lg card-hover">
+            <h3 class="text-xl font-semibold mb-4 text-cyan-300">
+                <i class="fas fa-play-circle mr-2"></i>Formulário de Teste
+            </h3>
+            <form id="api-test-form" class="space-y-4">
+                <div>
+                    <label for="url" class="block text-sm font-medium text-gray-400 mb-2">URL do Vídeo</label>
+                    <input type="url" name="url" id="url" placeholder="https://www.youtube.com/watch?v=..." required class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all">
+                </div>
+                <div>
+                    <label for="type" class="block text-sm font-medium text-gray-400 mb-2">Tipo</label>
+                    <select name="type" id="type" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                        <option value="audio">Áudio (MP3)</option>
+                        <option value="video">Vídeo (MP4)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="quality" class="block text-sm font-medium text-gray-400 mb-2">Qualidade (Vídeo)</label>
+                    <input type="text" name="quality" id="quality" placeholder="Ex: 720p (opcional)" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                </div>
+                <div>
+                    <label for="bitrate" class="block text-sm font-medium text-gray-400 mb-2">Bitrate (Áudio)</label>
+                    <input type="text" name="bitrate" id="bitrate" placeholder="Ex: 192k (opcional)" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                </div>
+                <button type="submit" class="w-full py-3 px-4 rounded-lg text-white font-semibold bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 flex items-center justify-center space-x-2 transition-all">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    <span>Enviar Requisição</span>
+                </button>
+            </form>
+        </div>
+        
+        <div class="glass-effect p-6 rounded-xl shadow-lg card-hover">
+            <h3 class="text-xl font-semibold mb-4 text-cyan-300">
+                <i class="fas fa-terminal mr-2"></i>Log da Requisição
+            </h3>
+            <div id="api-test-log" class="bg-gray-900 rounded-lg p-4 h-80 overflow-y-auto font-mono text-sm border border-gray-700">
+                <p class="text-gray-500">Aguardando requisição...</p>
+            </div>
+        </div>
+    </div>
+</section>

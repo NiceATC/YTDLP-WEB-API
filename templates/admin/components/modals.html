@@ -1,0 +1,40 @@
+<!-- Modals Component -->
+
+<!-- Response Modal -->
+<div id="response-modal" class="modal fixed inset-0 bg-black/70 items-center justify-center z-50">
+    <div class="glass-effect rounded-xl shadow-2xl w-full max-w-2xl">
+        <div class="flex justify-between items-center p-6 border-b border-gray-600">
+            <h3 class="text-xl font-bold text-cyan-300">Resposta Completa</h3>
+            <button class="close-modal-btn text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div class="p-6">
+            <pre id="modal-json-content" class="bg-gray-900 p-4 rounded-lg text-sm text-green-300 max-h-96 overflow-auto border border-gray-700"></pre>
+        </div>
+    </div>
+</div>
+
+<!-- Metadata Modal -->
+<div id="metadata-modal" class="modal fixed inset-0 bg-black/70 items-center justify-center z-50">
+    <div class="glass-effect rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center p-6 border-b border-gray-600">
+            <h3 class="text-xl font-bold text-cyan-300">Detalhes do Ficheiro</h3>
+            <button class="close-modal-btn text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div id="metadata-modal-content" class="p-6"></div>
+    </div>
+</div>
+
+<!-- Player Modal -->
+<div id="player-modal" class="modal fixed inset-0 bg-black/80 items-center justify-center z-50">
+    <div class="glass-effect rounded-xl shadow-2xl w-full max-w-4xl">
+        <div class="flex justify-between items-center p-6 border-b border-gray-600">
+            <h3 class="text-xl font-bold text-cyan-300">Player de Mídia</h3>
+            <button class="close-modal-btn text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div class="p-6">
+            <div id="player-content" class="player-container rounded-lg p-6">
+                <!-- Player será inserido aqui dinamicamente -->
+            </div>
+        </div>
+    </div>
+</div>

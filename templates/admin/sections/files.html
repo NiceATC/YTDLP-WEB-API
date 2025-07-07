@@ -1,0 +1,91 @@
+<!-- Files Section -->
+<section id="files" class="content-section">
+    <div class="mb-8 flex justify-between items-center">
+        <div>
+            <h2 class="text-4xl font-bold text-cyan-300 mb-2">Arquivos Baixados</h2>
+            <p class="text-gray-400">Gerencie e reproduza seus arquivos de mídia</p>
+        </div>
+        <form action="{{ url_for('admin.cleanup_missing_files') }}" method="POST">
+            <button type="submit" class="py-2 px-4 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-lg transition-all">
+                <i class="fas fa-broom mr-2"></i>Limpar Ausentes
+            </button>
+        </form>
+    </div>
+    
+    <div class="file-grid">
+        {% for file in files %}
+        <div class="file-card glass-effect rounded-xl shadow-lg overflow-hidden card-hover">
+            <div class="relative thumbnail">
+                <img src="{{ file.thumbnail_url or 'https://placehold.co/280x140/1f2937/374151?text=Sem+Thumb' }}" 
+                     alt="Thumbnail" class="w-full h-full object-cover">
+                <div class="absolute top-2 right-2">
+                    <span class="px-2 py-1 text-xs font-semibold rounded-full {{ 'bg-purple-600' if file.media_type == 'audio' else 'bg-blue-600' }} text-white">
+                        {{ 'Áudio' if file.media_type == 'audio' else 'Vídeo' }}
+                    </span>
+                </div>
+                <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                    {{ file.duration_string }}
+                </div>
+                {% if not file.file_exists %}
+                <div class="absolute inset-0 bg-red-900/80 flex items-center justify-center">
+                    <div class="text-center text-white">
+                        <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                        <p class="text-sm">Arquivo Ausente</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="content p-4">
+                <div class="flex-1">
+                    <h3 class="font-semibold text-white mb-2 line-clamp-2 text-sm">{{ file.title }}</h3>
+                    <p class="text-xs text-gray-400 mb-1">{{ file.uploader }}</p>
+                    <p class="text-xs text-gray-500 mb-3">
+                        {{ file.actual_size_mb if file.file_exists else 0 }} MB • {{ file.created_at.strftime('%d/%m/%Y') }}
+                    </p>
+                </div>
+                
+                <div class="flex space-x-1">
+                    {% if file.file_exists %}
+                    <button class="play-media-btn flex-1 py-2 px-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-xs rounded-lg transition-all" 
+                            data-filename="{{ file.filename }}" 
+                            data-type="{{ file.media_type }}"
+                            data-title="{{ file.title }}">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <a href="{{ url_for('api.download_file', filename=file.filename) }}" 
+                       target="_blank" 
+                       class="py-2 px-2 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white text-xs rounded-lg transition-all">
+                        <i class="fas fa-download"></i>
+                    </a>
+                    {% endif %}
+                    <button class="view-metadata-btn py-2 px-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xs rounded-lg transition-all" 
+                            data-metadata='{{ {
+                                "title": file.title,
+                                "uploader": file.uploader,
+                                "duration_string": file.duration_string,
+                                "view_count": file.view_count,
+                                "like_count": file.like_count,
+                                "upload_date": file.upload_date,
+                                "webpage_url": file.original_url,
+                                "description": file.description,
+                                "thumbnail_url": file.thumbnail_url
+                            } | tojson }}'>
+                        <i class="fas fa-info"></i>
+                    </button>
+                    <button class="delete-file-btn py-2 px-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-xs rounded-lg transition-all" 
+                            data-filename="{{ file.filename }}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-span-full text-center py-16 text-gray-500">
+            <i class="fas fa-folder-open text-6xl mb-4 block"></i>
+            <p class="text-xl">Nenhum ficheiro encontrado.</p>
+            <p class="text-sm mt-2">Faça o primeiro download usando a API!</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
