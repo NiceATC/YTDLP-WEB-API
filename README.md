@@ -49,6 +49,8 @@ Ou, se não usa Swarm:
 docker-compose up -d
 ```
 
+Se preferir pode usar o [DOCKER HUB](https://hub.docker.com/r/niceatc/ytdl-web-api)
+
 ### 4️⃣ Acesse o painel administrativo
 Abra no navegador:
 
