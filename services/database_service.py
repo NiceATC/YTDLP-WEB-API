@@ -157,6 +157,24 @@ class DatabaseService:
                 RequestHistory.created_at.desc()
             ).limit(limit).all()
     
+    @staticmethod
+    def delete_history_item(history_id: int) -> bool:
+        """Remove um item específico do histórico"""
+        with DatabaseService.get_session() as db:
+            history_item = db.query(RequestHistory).filter(RequestHistory.id == history_id).first()
+            if history_item:
+                db.delete(history_item)
+                db.commit()
+                return True
+            return False
+    
+    @staticmethod
+    def clear_history() -> None:
+        """Limpa todo o histórico de requisições"""
+        with DatabaseService.get_session() as db:
+            db.query(RequestHistory).delete()
+            db.commit()
+    
     # Media Files
     @staticmethod
     def save_media_file(filename: str, metadata: Dict, media_type: str, file_size_mb: float) -> MediaFile:

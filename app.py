@@ -3,7 +3,7 @@ import json
 import logging
 from functools import wraps
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 
 from celery.result import AsyncResult, TimeoutError
@@ -73,8 +73,68 @@ def ensure_cookie_file_exists():
         return False
 
 def get_downloaded_files():
-    """Retorna arquivos baixados do banco de dados"""
-    return DatabaseService.get_media_files()
+    """Retorna arquivos baixados do banco de dados com verificação de existência"""
+    files = DatabaseService.get_media_files()
+    for file in files:
+        file_path = os.path.join(Config.DOWNLOAD_FOLDER, file.filename)
+        file.file_exists = os.path.exists(file_path)
+        if file.file_exists:
+            try:
+                file.actual_size_mb = round(os.path.getsize(file_path) / (1024 * 1024), 2)
+            except:
+                file.actual_size_mb = 0
+        else:
+            file.actual_size_mb = 0
+    return files
+
+def get_dashboard_stats():
+    """Retorna estatísticas para o dashboard"""
+    history = DatabaseService.get_request_history(limit=1000)
+    now = datetime.utcnow()
+    week_ago = now - timedelta(days=7)
+    
+    # Estatísticas gerais
+    total_requests = len(history)
+    successful_requests = len([h for h in history if h.status == 'completed'])
+    failed_requests = len([h for h in history if h.status == 'failed'])
+    processing_requests = len([h for h in history if h.status == 'processing'])
+    
+    # Estatísticas dos últimos 7 dias
+    recent_history = [h for h in history if h.created_at >= week_ago]
+    recent_total = len(recent_history)
+    recent_successful = len([h for h in recent_history if h.status == 'completed'])
+    recent_failed = len([h for h in recent_history if h.status == 'failed'])
+    
+    # Estatísticas por tipo
+    audio_requests = len([h for h in history if h.request_data.get('type') == 'audio'])
+    video_requests = len([h for h in history if h.request_data.get('type') == 'video'])
+    
+    # Arquivos
+    files = get_downloaded_files()
+    total_files = len(files)
+    missing_files = len([f for f in files if not f.file_exists])
+    total_size_mb = sum([f.actual_size_mb for f in files if f.file_exists])
+    
+    return {
+        'total_requests': total_requests,
+        'successful_requests': successful_requests,
+        'failed_requests': failed_requests,
+        'processing_requests': processing_requests,
+        'success_rate': round((successful_requests / total_requests * 100) if total_requests > 0 else 0, 1),
+        'recent_total': recent_total,
+        'recent_successful': recent_successful,
+        'recent_failed': recent_failed,
+        'recent_success_rate': round((recent_successful / recent_total * 100) if recent_total > 0 else 0, 1),
+        'audio_requests': audio_requests,
+        'video_requests': video_requests,
+        'total_files': total_files,
+        'missing_files': missing_files,
+        'total_size_mb': round(total_size_mb, 2),
+        'week_comparison': {
+            'requests_change': recent_total - (total_requests - recent_total) if (total_requests - recent_total) > 0 else recent_total,
+            'success_change': recent_successful - (successful_requests - recent_successful) if (successful_requests - recent_successful) > 0 else recent_successful
+        }
+    }
 
 def login_required(f):
     @wraps(f)
@@ -138,13 +198,64 @@ def admin_dashboard():
     settings = Config.get_settings()
     api_keys = DatabaseService.get_api_keys()
     cookie_file_exists = DatabaseService.get_cookie_file() is not None
+    stats = get_dashboard_stats()
     
     return render_template('dashboard.html', 
                            history=history, 
                            files=get_downloaded_files(), 
                            settings=settings,
                            api_keys=api_keys,
-                           cookie_file_exists=cookie_file_exists)
+                           cookie_file_exists=cookie_file_exists,
+                           stats=stats)
+
+@app.route('/admin/history/delete/<int:history_id>', methods=['POST'])
+@login_required
+def delete_history_item():
+    history_id = request.json.get('id')
+    if DatabaseService.delete_history_item(history_id):
+        return jsonify({'success': True})
+    return jsonify({'success': False}), 404
+
+@app.route('/admin/history/clear', methods=['POST'])
+@login_required
+def clear_history():
+    DatabaseService.clear_history()
+    flash('Histórico limpo com sucesso!', 'success')
+    return redirect(url_for('admin_dashboard') + '#history')
+
+@app.route('/admin/files/delete/<filename>', methods=['POST'])
+@login_required
+def delete_file():
+    filename = request.json.get('filename')
+    try:
+        # Remove do banco de dados
+        DatabaseService.delete_media_file(filename)
+        
+        # Remove do filesystem se existir
+        file_path = os.path.join(Config.DOWNLOAD_FOLDER, filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logging.error(f"Erro ao deletar arquivo {filename}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/admin/files/cleanup', methods=['POST'])
+@login_required
+def cleanup_missing_files():
+    """Remove registros de arquivos que não existem mais no filesystem"""
+    files = DatabaseService.get_media_files()
+    removed_count = 0
+    
+    for file in files:
+        file_path = os.path.join(Config.DOWNLOAD_FOLDER, file.filename)
+        if not os.path.exists(file_path):
+            DatabaseService.delete_media_file(file.filename)
+            removed_count += 1
+    
+    flash(f'{removed_count} registros de arquivos inexistentes foram removidos.', 'success')
+    return redirect(url_for('admin_dashboard') + '#files')
 
 @app.route('/admin/settings', methods=['POST'])
 @login_required
