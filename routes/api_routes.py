@@ -16,7 +16,7 @@ from utils.decorators import require_api_key
 api_bp = Blueprint('api', __name__)
 
 def get_rate_limit_string():
-    return Config.get_settings().get("DEFAULT_RATE_LIMIT", "20 per minute")
+    return Config.get_settings().get("DEFAULT_RATE_LIMIT", "50 per minute")
 
 limiter = Limiter(
     get_rate_limit_string,
@@ -87,7 +87,32 @@ def download_media():
         if task.failed():
             raise task.info
         
-        response_data = {"status": "completed", "result": result}
+        download_url = result.get('download_url')
+        if download_url and not download_url.startswith(('http://', 'https://')):
+            download_url = f"https://{download_url}"
+        elif download_url and download_url.startswith('http://'):
+            download_url = download_url.replace('http://', 'https://', 1)
+
+        response_data = {
+            "status": {
+                "task": "completed",
+                "task_id": task.id,
+                "time_spend": result.get('time_spend', 'N/A'),
+                "download_url": download_url,
+            },
+            "metadata": {
+                "description": result.get('description'),
+                "duration_string": result.get('duration_string'),
+                "like_count": result.get('like_count'),
+                "thumbnail": result.get('thumbnail'),
+                "title": result.get('title'),
+                "upload_date": result.get('upload_date'),
+                "uploader": result.get('uploader'),
+                "view_count": result.get('view_count'),
+                "youtube_url": result.get('webpage_url')
+            }
+        }
+        
         DatabaseService.log_request(api_key, request.args.to_dict(), response_data, "completed")
         return jsonify(response_data), 200
     except TimeoutError:
@@ -103,7 +128,7 @@ def download_media():
         error_info = str(e)
         response_data = {"status": "failed", "task_id": task.id, "error": error_info}
         DatabaseService.log_request(api_key, request.args.to_dict(), response_data, "failed")
-        return jsonify(response_data), 500
+        return jsonify(response_data), 504
 
 @api_bp.route('/tasks/<task_id>', methods=['GET'])
 @require_api_key
@@ -112,7 +137,32 @@ def get_task_status(task_id):
     if task_result.state == 'PENDING': 
         response = {'status': 'pending', 'message': 'A tarefa ainda não foi iniciada.'}
     elif task_result.state == 'SUCCESS': 
-        response = {'status': 'completed', 'result': task_result.result}
+        result = task_result.result
+        download_url = result.get('download_url')
+        if download_url and not download_url.startswith(('http://', 'https://')):
+            download_url = f"https://{download_url}"
+        elif download_url and download_url.startswith('http://'):
+            download_url = download_url.replace('http://', 'https://', 1)
+        
+        response = {
+            "status": {
+                "task": "completed",
+                "task_id": task_id,
+                "time_spend": result.get('time_spend', 'N/A'),
+                "download_url": download_url,
+            },
+            "metadata": {
+                "description": result.get('description'),
+                "duration_string": result.get('duration_string'),
+                "like_count": result.get('like_count'),
+                "thumbnail": result.get('thumbnail'),
+                "title": result.get('title'),
+                "upload_date": result.get('upload_date'),
+                "uploader": result.get('uploader'),
+                "view_count": result.get('view_count'),
+                "youtube_url": result.get('webpage_url')
+            }
+        }
     elif task_result.state == 'FAILURE': 
         response = {'status': 'failed', 'message': str(task_result.info)}
     else: 

@@ -2,6 +2,8 @@ import os
 import uuid
 import logging
 import json
+import time
+from datetime import datetime
 from celery import Celery
 from yt_dlp import YoutubeDL
 from config import Config
@@ -11,7 +13,6 @@ logger = logging.getLogger(__name__)
 celery = Celery(__name__, broker=Config.REDIS_URL, backend=Config.REDIS_URL)
 
 def ensure_cookies_available():
-    """Garante que o arquivo de cookies está disponível para o yt-dlp"""
     try:
         cookie_file = DatabaseService.get_cookie_file()
         if cookie_file:
@@ -27,6 +28,7 @@ def ensure_cookies_available():
 
 @celery.task(bind=True)
 def process_media(self, url, media_type, quality=None, bitrate=None):
+    start_time = time.time()
     try:
         logger.info(f"Iniciando tarefa {self.request.id}: tipo={media_type}, url='{url}'")
         
@@ -43,7 +45,6 @@ def process_media(self, url, media_type, quality=None, bitrate=None):
             'writeinfojson': True,
         }
         
-        # CRÍTICO: Sempre verifica e prepara o arquivo de cookies antes do download
         cookies_path = ensure_cookies_available()
         if cookies_path and os.path.exists(cookies_path):
             ydl_opts['cookiefile'] = cookies_path
@@ -70,7 +71,6 @@ def process_media(self, url, media_type, quality=None, bitrate=None):
             info_dict = ydl.extract_info(url, download=True)
         logger.info(f"Tarefa {self.request.id}: Processamento do yt-dlp concluido.")
 
-        # Como agora só usamos URLs diretas, não precisamos verificar 'entries'
         final_info = info_dict
 
         processed_filepath = f"{temp_base_path}{final_extension}"
@@ -92,11 +92,9 @@ def process_media(self, url, media_type, quality=None, bitrate=None):
                 logger.error(f"Tarefa {self.request.id}: ERRO CRITICO! O ficheiro processado '{processed_filepath}' nao foi encontrado.")
                 raise FileNotFoundError(f"O ficheiro processado '{processed_filepath}' nao foi encontrado apos o download.")
 
-        # Salva metadados no banco de dados
         file_size_mb = round(os.path.getsize(output_path) / (1024 * 1024), 2)
         DatabaseService.save_media_file(output_filename, final_info, media_type, file_size_mb)
 
-        # Remove arquivo de info temporário se existir
         temp_info_path = f"{temp_base_path}.info.json"
         if os.path.exists(temp_info_path):
             os.remove(temp_info_path)
@@ -104,6 +102,17 @@ def process_media(self, url, media_type, quality=None, bitrate=None):
         download_url = f"{Config.BASE_URL}/api/download/{output_filename}"
         logger.info(f"Tarefa {self.request.id}: Concluida com sucesso.")
         
+        processing_time = round(time.time() - start_time)
+        
+        upload_date_str = final_info.get('upload_date')
+        formatted_date = 'N/A'
+        if upload_date_str:
+            try:
+                formatted_date = datetime.strptime(upload_date_str, '%Y%m%d').strftime('%d/%m/%Y')
+            except ValueError:
+                logger.warning(f"Tarefa {self.request.id}: Formato de data inválido '{upload_date_str}'")
+                formatted_date = upload_date_str
+
         return {
             'download_url': download_url,
             'title': final_info.get('title', 'N/A'),
@@ -114,7 +123,8 @@ def process_media(self, url, media_type, quality=None, bitrate=None):
             'view_count': final_info.get('view_count'),
             'like_count': final_info.get('like_count'),
             'description': final_info.get('description'),
-            'upload_date': final_info.get('upload_date'),
+            'upload_date': formatted_date,
+            'time_spend': f"{processing_time}s",
         }
     except Exception as e:
         logger.error(f"Erro na tarefa {self.request.id}: {e}", exc_info=True)
