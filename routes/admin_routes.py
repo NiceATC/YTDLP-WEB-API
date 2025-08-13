@@ -15,20 +15,27 @@ def dashboard():
     if session.get('force_change'):
         return render_template('admin/dashboard.html', force_change=True)
 
-    history = AdminService.get_processed_history()
-    settings = Config.get_settings()
-    api_keys = DatabaseService.get_api_keys()
-    cookie_file_exists = DatabaseService.get_cookie_file() is not None
-    stats = AdminService.get_dashboard_stats()
-    files = AdminService.get_downloaded_files()
-    
-    return render_template('admin/dashboard.html', 
-                           history=history, 
-                           files=files, 
-                           settings=settings,
-                           api_keys=api_keys,
-                           cookie_file_exists=cookie_file_exists,
-                           stats=stats)
+    try:
+        history = AdminService.get_processed_history()
+        settings = Config.get_settings()
+        api_keys = DatabaseService.get_api_keys()
+        cookie_file_exists = DatabaseService.get_cookie_file() is not None
+        cookie_status = FileService.check_cookie_status()
+        stats = AdminService.get_dashboard_stats()
+        files = AdminService.get_downloaded_files()
+        
+        return render_template('admin/dashboard.html', 
+                               history=history, 
+                               files=files, 
+                               settings=settings,
+                               api_keys=api_keys,
+                               cookie_file_exists=cookie_file_exists,
+                               cookie_status=cookie_status,
+                               stats=stats)
+    except Exception as e:
+        logging.error(f"Erro no dashboard: {e}")
+        flash('Erro ao carregar dashboard. Tente novamente.', 'error')
+        return redirect(url_for('auth.login'))
 
 @admin_bp.route('/settings', methods=['POST'])
 @login_required
@@ -57,6 +64,21 @@ def delete_api_key():
     else:
         flash('Chave de API não encontrada.', 'error')
     return redirect(url_for('admin.dashboard') + '#settings')
+
+@admin_bp.route('/cookies/sync', methods=['POST'])
+@login_required
+def sync_cookies():
+    try:
+        FileService.ensure_cookies_available()
+        cookie_status = FileService.check_cookie_status()
+        return jsonify({
+            'success': True, 
+            'status': cookie_status,
+            'message': 'Cookies sincronizados com sucesso!'
+        })
+    except Exception as e:
+        logging.error(f"Erro ao sincronizar cookies: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @admin_bp.route('/cookies/delete', methods=['POST'])
 @login_required
@@ -102,8 +124,7 @@ def delete_history_item():
 @login_required
 def clear_history():
     DatabaseService.clear_history()
-    flash('Histórico limpo com sucesso!', 'success')
-    return redirect(url_for('admin.dashboard') + '#history')
+    return jsonify({'success': True})
 
 @admin_bp.route('/files/delete', methods=['POST'])
 @login_required
@@ -120,5 +141,4 @@ def delete_file():
 @login_required
 def cleanup_missing_files():
     removed_count = AdminService.cleanup_missing_files()
-    flash(f'{removed_count} registros de arquivos inexistentes foram removidos.', 'success')
-    return redirect(url_for('admin.dashboard') + '#files')
+    return jsonify({'success': True, 'removed_count': removed_count})

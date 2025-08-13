@@ -119,12 +119,12 @@
                     <i class="fas fa-vial mr-2"></i>Testar API
                 </a>
                 <form action="{{ url_for('admin.cleanup_missing_files') }}" method="POST" class="inline-block w-full">
-                    <button type="submit" class="w-full py-2 px-4 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-lg transition-all">
+                    <button type="button" class="cleanup-files-btn w-full py-2 px-4 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-lg transition-all">
                         <i class="fas fa-broom mr-2"></i>Limpar Arquivos Ausentes
                     </button>
                 </form>
                 <form action="{{ url_for('admin.clear_history') }}" method="POST" class="inline-block w-full" onsubmit="return confirm('Tem certeza que deseja limpar todo o histórico?')">
-                    <button type="submit" class="w-full py-2 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg transition-all">
+                    <button type="button" class="clear-history-btn w-full py-2 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg transition-all">
                         <i class="fas fa-trash mr-2"></i>Limpar Histórico
                     </button>
                 </form>

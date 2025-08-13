@@ -6,7 +6,7 @@
             <p class="text-gray-400">Acompanhe todas as requisições feitas à API</p>
         </div>
         <form action="{{ url_for('admin.clear_history') }}" method="POST" onsubmit="return confirm('Tem certeza que deseja limpar todo o histórico?')">
-            <button type="submit" class="py-2 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg transition-all">
+            <button type="button" class="clear-history-btn py-2 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg transition-all">
                 <i class="fas fa-trash mr-2"></i>Limpar Histórico
             </button>
         </form>

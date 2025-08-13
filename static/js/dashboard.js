@@ -10,6 +10,7 @@ class Dashboard {
         this.setupApiTester();
         this.setupFileManagement();
         this.setupHistoryManagement();
+        this.setupCookieManagement();
         this.autoHideFlashMessages();
         this.initializeTooltips();
     }
@@ -262,6 +263,7 @@ class Dashboard {
                     if (response.ok) {
                         setTimeout(() => card.remove(), 300);
                         this.showNotification('Arquivo deletado com sucesso!', 'success');
+                        this.updateFileStats();
                     } else {
                         card.classList.remove('delete-animation');
                         this.showNotification('Erro ao deletar arquivo', 'error');
@@ -272,6 +274,30 @@ class Dashboard {
                 }
             });
         });
+
+        // Cleanup missing files handler
+        const cleanupBtn = document.querySelector('.cleanup-files-btn');
+        if (cleanupBtn) {
+            cleanupBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                if (!confirm('Tem certeza que deseja limpar arquivos ausentes?')) return;
+                
+                try {
+                    const response = await fetch('/admin/files/cleanup', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        this.showNotification(`${result.removed_count} registros removidos!`, 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    }
+                } catch (error) {
+                    this.showNotification('Erro ao limpar arquivos', 'error');
+                }
+            });
+        }
     }
 
     setupHistoryManagement() {
@@ -295,6 +321,7 @@ class Dashboard {
                     if (response.ok) {
                         setTimeout(() => row.remove(), 300);
                         this.showNotification('Item removido do histórico!', 'success');
+                        this.updateHistoryStats();
                     } else {
                         row.classList.remove('delete-animation');
                         this.showNotification('Erro ao remover item', 'error');
@@ -305,6 +332,99 @@ class Dashboard {
                 }
             });
         });
+
+        // Clear all history handler
+        const clearBtn = document.querySelector('.clear-history-btn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                if (!confirm('Tem certeza que deseja limpar todo o histórico?')) return;
+                
+                try {
+                    const response = await fetch('/admin/history/clear', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    if (response.ok) {
+                        this.showNotification('Histórico limpo com sucesso!', 'success');
+                        setTimeout(() => location.reload(), 1000);
+                    }
+                } catch (error) {
+                    this.showNotification('Erro ao limpar histórico', 'error');
+                }
+            });
+        }
+    }
+
+    setupCookieManagement() {
+        // Sync cookies handler
+        const syncBtn = document.querySelector('.sync-cookies-btn');
+        if (syncBtn) {
+            syncBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                
+                try {
+                    syncBtn.disabled = true;
+                    syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sincronizando...';
+                    
+                    const response = await fetch('/admin/cookies/sync', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        this.showNotification(result.message, 'success');
+                        this.updateCookieStatus(result.status);
+                    } else {
+                        this.showNotification('Erro ao sincronizar cookies', 'error');
+                    }
+                } catch (error) {
+                    this.showNotification('Erro de rede', 'error');
+                } finally {
+                    syncBtn.disabled = false;
+                    syncBtn.innerHTML = '<i class="fas fa-sync mr-2"></i>Sincronizar';
+                }
+            });
+        }
+    }
+
+    updateCookieStatus(status) {
+        const statusEl = document.querySelector('.cookie-status');
+        if (statusEl) {
+            statusEl.className = `cookie-status ${status}`;
+            const statusText = {
+                'ok': 'Cookies Válidos',
+                'expired': 'Cookies Expirados',
+                'needs_sync': 'Precisa Sincronizar',
+                'missing': 'Sem Cookies'
+            };
+            statusEl.innerHTML = `<i class="fas fa-cookie-bite mr-1"></i>${statusText[status] || 'Status Desconhecido'}`;
+        }
+    }
+
+    updateFileStats() {
+        // Atualiza contadores de arquivos
+        const fileCards = document.querySelectorAll('.file-card');
+        const totalFiles = fileCards.length;
+        const missingFiles = document.querySelectorAll('.file-card .bg-red-900').length;
+        
+        // Atualiza elementos de estatística se existirem
+        const totalFilesEl = document.querySelector('[data-stat="total-files"]');
+        const missingFilesEl = document.querySelector('[data-stat="missing-files"]');
+        
+        if (totalFilesEl) totalFilesEl.textContent = totalFiles;
+        if (missingFilesEl) missingFilesEl.textContent = missingFiles;
+    }
+
+    updateHistoryStats() {
+        // Atualiza contadores do histórico
+        const historyRows = document.querySelectorAll('tbody tr');
+        const totalRequests = historyRows.length;
+        
+        const totalRequestsEl = document.querySelector('[data-stat="total-requests"]');
+        if (totalRequestsEl) totalRequestsEl.textContent = totalRequests;
     }
 
     autoHideFlashMessages() {

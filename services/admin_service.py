@@ -49,8 +49,8 @@ class AdminService:
         recent_failed = len([h for h in recent_history if h.status == 'failed'])
         
         # Estatísticas por tipo
-        audio_requests = len([h for h in history if h.request_data.get('type') == 'audio'])
-        video_requests = len([h for h in history if h.request_data.get('type') == 'video'])
+        audio_requests = len([h for h in history if h.request_data.get('type') == 'audio' and h.status == 'completed'])
+        video_requests = len([h for h in history if h.request_data.get('type') == 'video' and h.status == 'completed'])
         
         # Arquivos
         files = AdminService.get_downloaded_files()
