@@ -3,6 +3,7 @@ import logging
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify
 from werkzeug.utils import secure_filename
 from services.database_service import DatabaseService
+from services.file_service import FileService
 from services.admin_service import AdminService
 from utils.decorators import login_required
 from config import Config
