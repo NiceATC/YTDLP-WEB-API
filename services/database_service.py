@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
-from database.models import User, ApiKey, Settings, RequestHistory, MediaFile, CookieFile
+from database.models import User, ApiKey, Settings, RequestHistory, MediaFile, CookieFile, AppSettings, Folder, BatchDownload
 from werkzeug.security import generate_password_hash, check_password_hash
 
 class DatabaseService:
@@ -200,11 +200,57 @@ class DatabaseService:
             return media_file
     
     @staticmethod
-    def get_media_files() -> List[MediaFile]:
+    def get_media_files(folder_id: int = None, search: str = None, media_type: str = None, sort_by: str = 'created_at', sort_order: str = 'desc', limit: int = None, offset: int = 0) -> List[MediaFile]:
         """Retorna todos os arquivos de mídia"""
         with DatabaseService.get_session() as db:
-            return db.query(MediaFile).order_by(MediaFile.created_at.desc()).all()
+            query = db.query(MediaFile)
+            
+            # Filter by folder
+            if folder_id is not None:
+                query = query.filter(MediaFile.folder_id == folder_id)
+            
+            # Search filter
+            if search:
+                query = query.filter(
+                    MediaFile.title.ilike(f'%{search}%') |
+                    MediaFile.uploader.ilike(f'%{search}%')
+                )
+            
+            # Media type filter
+            if media_type:
+                query = query.filter(MediaFile.media_type == media_type)
+            
+            # Sorting
+            if sort_order == 'desc':
+                query = query.order_by(getattr(MediaFile, sort_by).desc())
+            else:
+                query = query.order_by(getattr(MediaFile, sort_by))
+            
+            # Pagination
+            if offset:
+                query = query.offset(offset)
+            if limit:
+                query = query.limit(limit)
+            
+            return query.all()
     
+    @staticmethod
+    def get_media_files_count(folder_id: int = None, search: str = None, media_type: str = None) -> int:
+        """Retorna o total de arquivos com filtros"""
+        with DatabaseService.get_session() as db:
+            query = db.query(MediaFile)
+            
+            if folder_id is not None:
+                query = query.filter(MediaFile.folder_id == folder_id)
+            if search:
+                query = query.filter(
+                    MediaFile.title.ilike(f'%{search}%') |
+                    MediaFile.uploader.ilike(f'%{search}%')
+                )
+            if media_type:
+                query = query.filter(MediaFile.media_type == media_type)
+            
+            return query.count()
     @staticmethod
     def delete_media_file(filename: str) -> bool:
         """Remove um arquivo de mídia do banco"""
@@ -248,3 +294,99 @@ class DatabaseService:
                 db.commit()
                 return True
             return False
+    
+    # App Settings Management
+    @staticmethod
+    def get_app_settings() -> Optional[AppSettings]:
+        """Retorna as configurações da aplicação"""
+        with DatabaseService.get_session() as db:
+            return db.query(AppSettings).first()
+    
+    @staticmethod
+    def update_app_settings(**kwargs) -> AppSettings:
+        """Atualiza as configurações da aplicação"""
+        with DatabaseService.get_session() as db:
+            settings = db.query(AppSettings).first()
+            if not settings:
+                settings = AppSettings()
+                db.add(settings)
+            
+            for key, value in kwargs.items():
+                if hasattr(settings, key):
+                    setattr(settings, key, value)
+            
+            settings.updated_at = datetime.utcnow()
+            db.commit()
+            db.refresh(settings)
+            return settings
+    
+    # Folder Management
+    @staticmethod
+    def get_folders() -> List[Folder]:
+        """Retorna todas as pastas"""
+        with DatabaseService.get_session() as db:
+            return db.query(Folder).order_by(Folder.name).all()
+    
+    @staticmethod
+    def create_folder(name: str, parent_id: int = None) -> Folder:
+        """Cria uma nova pasta"""
+        with DatabaseService.get_session() as db:
+            folder = Folder(name=name, parent_id=parent_id)
+            db.add(folder)
+            db.commit()
+            db.refresh(folder)
+            return folder
+    
+    @staticmethod
+    def delete_folder(folder_id: int) -> bool:
+        """Remove uma pasta"""
+        with DatabaseService.get_session() as db:
+            folder = db.query(Folder).filter(Folder.id == folder_id).first()
+            if folder:
+                # Move files to root
+                db.query(MediaFile).filter(MediaFile.folder_id == folder_id).update({'folder_id': None})
+                db.delete(folder)
+                db.commit()
+                return True
+            return False
+    
+    # Batch Download Management
+    @staticmethod
+    def create_batch_download(name: str, urls: List[str], media_type: str, **kwargs) -> BatchDownload:
+        """Cria um download em lote"""
+        with DatabaseService.get_session() as db:
+            batch = BatchDownload(
+                name=name,
+                urls=urls,
+                media_type=media_type,
+                total_files=len(urls),
+                **kwargs
+            )
+            db.add(batch)
+            db.commit()
+            db.refresh(batch)
+            return batch
+    
+    @staticmethod
+    def get_batch_downloads() -> List[BatchDownload]:
+        """Retorna todos os downloads em lote"""
+        with DatabaseService.get_session() as db:
+            return db.query(BatchDownload).order_by(BatchDownload.created_at.desc()).all()
+    
+    @staticmethod
+    def update_batch_progress(batch_id: int, completed: int, failed: int = 0) -> None:
+        """Atualiza o progresso de um download em lote"""
+        with DatabaseService.get_session() as db:
+            batch = db.query(BatchDownload).filter(BatchDownload.id == batch_id).first()
+            if batch:
+                batch.completed_files = completed
+                batch.failed_files = failed
+                batch.progress = int((completed + failed) / batch.total_files * 100)
+                
+                if batch.progress >= 100:
+                    batch.status = 'completed'
+                    batch.completed_at = datetime.utcnow()
+                elif failed > 0:
+                    batch.status = 'processing'
+                
+                db.commit()

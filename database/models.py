@@ -57,6 +57,8 @@ class MediaFile(Base):
     thumbnail_url = Column(Text, nullable=True)
     file_size_mb = Column(Integer, nullable=True)
     media_type = Column(String(10), nullable=False)  # 'audio' or 'video'
+    folder_id = Column(Integer, nullable=True)
+    tags = Column(JSON, nullable=True)  # For categorization
     created_at = Column(DateTime, default=func.now())
 
 class CookieFile(Base):
@@ -66,3 +68,41 @@ class CookieFile(Base):
     content = Column(LargeBinary, nullable=False)
     filename = Column(String(100), default='cookies.txt')
     uploaded_at = Column(DateTime, default=func.now())
+
+class AppSettings(Base):
+    __tablename__ = 'app_settings'
+    
+    id = Column(Integer, primary_key=True)
+    app_name = Column(String(100), default='YTDL Web API')
+    app_logo = Column(Text, nullable=True)  # URL or base64
+    primary_color = Column(String(7), default='#0891b2')  # hex color
+    secondary_color = Column(String(7), default='#0e7490')
+    favicon_url = Column(Text, nullable=True)
+    footer_text = Column(String(200), default='© 2024 YTDL Web API')
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+class Folder(Base):
+    __tablename__ = 'folders'
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    parent_id = Column(Integer, nullable=True)  # For nested folders
+    created_at = Column(DateTime, default=func.now())
+
+class BatchDownload(Base):
+    __tablename__ = 'batch_downloads'
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(200), nullable=False)
+    urls = Column(JSON, nullable=False)  # List of URLs
+    media_type = Column(String(10), nullable=False)
+    quality = Column(String(10), nullable=True)
+    bitrate = Column(String(10), nullable=True)
+    folder_id = Column(Integer, nullable=True)
+    status = Column(String(20), default='pending')  # pending, processing, completed, failed
+    progress = Column(Integer, default=0)  # 0-100
+    total_files = Column(Integer, default=0)
+    completed_files = Column(Integer, default=0)
+    failed_files = Column(Integer, default=0)
+    created_at = Column(DateTime, default=func.now())
+    completed_at = Column(DateTime, nullable=True)

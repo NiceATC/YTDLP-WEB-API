@@ -13,6 +13,8 @@ class Dashboard {
         this.setupCookieManagement();
         this.autoHideFlashMessages();
         this.initializeTooltips();
+        this.initializeCharts();
+        this.setupFileManagement();
     }
 
     setupNavigation() {
@@ -336,19 +338,36 @@ class Dashboard {
         // Clear all history handler
         const clearBtn = document.querySelector('.clear-history-btn');
         if (clearBtn) {
-            clearBtn.addEventListener('click', async (e) => {
-                e.preventDefault();
+            clearBtn.addEventListener('click', async () => {
                 if (!confirm('Tem certeza que deseja limpar todo o histórico?')) return;
                 
                 try {
                     const response = await fetch('/admin/history/clear', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
                     });
                     
-                    if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
                         this.showNotification('Histórico limpo com sucesso!', 'success');
-                        setTimeout(() => location.reload(), 1000);
+                        // Remove all history rows
+                        const tbody = document.querySelector('#history tbody');
+                        if (tbody) {
+                            tbody.innerHTML = `
+                                <tr>
+                                    <td colspan="4" class="text-center py-8 text-gray-500">
+                                        <i class="fas fa-inbox text-4xl mb-4 block"></i>
+                                        Nenhum histórico encontrado.
+                                    </td>
+                                </tr>
+                            `;
+                        }
+                        this.updateHistoryStats();
+                    } else {
+                        this.showNotification('Erro ao limpar histórico', 'error');
                     }
                 } catch (error) {
                     this.showNotification('Erro ao limpar histórico', 'error');

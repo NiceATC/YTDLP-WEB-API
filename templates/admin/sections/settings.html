@@ -6,6 +6,48 @@
     </div>
     
     <div class="space-y-8">
+        <!-- Configurações da Aplicação -->
+        <div class="glass-effect p-6 rounded-xl shadow-lg card-hover">
+            <h3 class="text-2xl font-semibold mb-4 text-cyan-300 border-b border-gray-600 pb-2">
+                <i class="fas fa-palette mr-2"></i>Personalização da Aplicação
+            </h3>
+            <form action="{{ url_for('admin.update_app_settings') }}" method="POST" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="app_name" class="block text-sm font-medium text-gray-400 mb-2">Nome da Aplicação</label>
+                        <input type="text" name="app_name" id="app_name" value="{{ app_settings.app_name if app_settings else 'YTDL Web API' }}" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label for="footer_text" class="block text-sm font-medium text-gray-400 mb-2">Texto do Rodapé</label>
+                        <input type="text" name="footer_text" id="footer_text" value="{{ app_settings.footer_text if app_settings else '© 2024 YTDL Web API' }}" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="primary_color" class="block text-sm font-medium text-gray-400 mb-2">Cor Primária</label>
+                        <input type="color" name="primary_color" id="primary_color" value="{{ app_settings.primary_color if app_settings else '#0891b2' }}" class="w-full h-12 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label for="secondary_color" class="block text-sm font-medium text-gray-400 mb-2">Cor Secundária</label>
+                        <input type="color" name="secondary_color" id="secondary_color" value="{{ app_settings.secondary_color if app_settings else '#0e7490' }}" class="w-full h-12 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="app_logo" class="block text-sm font-medium text-gray-400 mb-2">URL do Logo</label>
+                        <input type="url" name="app_logo" id="app_logo" value="{{ app_settings.app_logo if app_settings else '' }}" placeholder="https://exemplo.com/logo.png" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label for="favicon_url" class="block text-sm font-medium text-gray-400 mb-2">URL do Favicon</label>
+                        <input type="url" name="favicon_url" id="favicon_url" value="{{ app_settings.favicon_url if app_settings else '' }}" placeholder="https://exemplo.com/favicon.ico" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                    </div>
+                </div>
+                <button type="submit" class="py-3 px-6 rounded-lg text-white font-semibold bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 transition-all">
+                    <i class="fas fa-save mr-2"></i>Salvar Personalização
+                </button>
+            </form>
+        </div>
+        
         <!-- Configurações Gerais -->
         <div class="glass-effect p-6 rounded-xl shadow-lg card-hover">
             <h3 class="text-2xl font-semibold mb-4 text-cyan-300 border-b border-gray-600 pb-2">

@@ -2,90 +2,304 @@
 <section id="files" class="content-section">
     <div class="mb-8 flex justify-between items-center">
         <div>
-            <h2 class="text-4xl font-bold text-cyan-300 mb-2">Arquivos Baixados</h2>
-            <p class="text-gray-400">Gerencie e reproduza seus arquivos de mídia</p>
+            <h2 class="text-4xl font-bold text-cyan-300 mb-2">Gerenciamento de Arquivos</h2>
+            <p class="text-gray-400">Organize e gerencie seus arquivos de mídia</p>
         </div>
-        <form action="{{ url_for('admin.cleanup_missing_files') }}" method="POST">
-            <button type="button" class="cleanup-files-btn py-2 px-4 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-lg transition-all">
+        <div class="flex space-x-3">
+            <button class="new-folder-btn py-2 px-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg transition-all">
+                <i class="fas fa-folder-plus mr-2"></i>Nova Pasta
+            </button>
+            <button class="batch-download-btn py-2 px-4 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg transition-all">
+                <i class="fas fa-download mr-2"></i>Download em Lote
+            </button>
+            <button class="cleanup-files-btn py-2 px-4 bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white rounded-lg transition-all">
                 <i class="fas fa-broom mr-2"></i>Limpar Ausentes
             </button>
-        </form>
+        </div>
     </div>
     
-    <div class="file-grid">
-        {% for file in files %}
-        <div class="file-card glass-effect rounded-xl shadow-lg overflow-hidden card-hover">
-            <div class="relative thumbnail">
-                <img src="{{ file.thumbnail_url or 'https://placehold.co/280x140/1f2937/374151?text=Sem+Thumb' }}" 
-                     alt="Thumbnail" class="w-full h-full object-cover">
-                <div class="absolute top-2 right-2">
-                    <span class="px-2 py-1 text-xs font-semibold rounded-full {{ 'bg-purple-600' if file.media_type == 'audio' else 'bg-blue-600' }} text-white">
-                        {{ 'Áudio' if file.media_type == 'audio' else 'Vídeo' }}
-                    </span>
-                </div>
-                <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                    {{ file.duration_string }}
-                </div>
-                {% if not file.file_exists %}
-                <div class="absolute inset-0 bg-red-900/80 flex items-center justify-center">
-                    <div class="text-center text-white">
-                        <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
-                        <p class="text-sm">Arquivo Ausente</p>
-                    </div>
-                </div>
-                {% endif %}
+    <!-- Filters and Search -->
+    <div class="glass-effect p-4 rounded-xl mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">Pesquisar</label>
+                <input type="text" id="file-search" placeholder="Título ou autor..." class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
             </div>
-            
-            <div class="content p-4">
-                <div class="flex-1">
-                    <h3 class="font-semibold text-white mb-2 line-clamp-2 text-sm">{{ file.title }}</h3>
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">Pasta</label>
+                <select id="folder-filter" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                    <option value="">Todas as pastas</option>
+                    <option value="0">Raiz</option>
+                    {% for folder in folders %}
+                    <option value="{{ folder.id }}">{{ folder.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">Tipo</label>
+                <select id="type-filter" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                    <option value="">Todos os tipos</option>
+                    <option value="audio">Áudio</option>
+                    <option value="video">Vídeo</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">Ordenar por</label>
+                <select id="sort-filter" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                    <option value="created_at-desc">Mais recente</option>
+                    <option value="created_at-asc">Mais antigo</option>
+                    <option value="title-asc">Título A-Z</option>
+                    <option value="title-desc">Título Z-A</option>
+                    <option value="file_size_mb-desc">Maior tamanho</option>
+                    <option value="file_size_mb-asc">Menor tamanho</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Folders Section -->
+    <div class="mb-6">
+        <h3 class="text-lg font-semibold text-cyan-300 mb-3">
+            <i class="fas fa-folder mr-2"></i>Pastas
+        </h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" id="folders-grid">
+            <div class="folder-item glass-effect p-4 rounded-lg cursor-pointer hover:bg-gray-700/30 transition-all" data-folder-id="0">
+                <div class="text-center">
+                    <i class="fas fa-folder text-3xl text-yellow-400 mb-2"></i>
+                    <p class="text-sm text-white">Raiz</p>
+                    <p class="text-xs text-gray-400">{{ files|selectattr('folder_id', 'none')|list|length }} arquivos</p>
+                </div>
+            </div>
+            {% for folder in folders %}
+            <div class="folder-item glass-effect p-4 rounded-lg cursor-pointer hover:bg-gray-700/30 transition-all" data-folder-id="{{ folder.id }}">
+                <div class="text-center">
+                    <i class="fas fa-folder text-3xl text-blue-400 mb-2"></i>
+                    <p class="text-sm text-white">{{ folder.name }}</p>
+                    <p class="text-xs text-gray-400">{{ files|selectattr('folder_id', 'equalto', folder.id)|list|length }} arquivos</p>
+                </div>
+                <button class="delete-folder-btn absolute top-2 right-2 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity" data-folder-id="{{ folder.id }}">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Files Grid -->
+    <div class="mb-4 flex justify-between items-center">
+        <div class="text-sm text-gray-400">
+            Mostrando <span id="files-count">{{ files|length }}</span> arquivos
+        </div>
+        <div class="flex items-center space-x-2">
+            <button id="grid-view-btn" class="p-2 bg-cyan-600 text-white rounded-lg">
+                <i class="fas fa-th"></i>
+            </button>
+            <button id="list-view-btn" class="p-2 bg-gray-600 text-white rounded-lg">
+                <i class="fas fa-list"></i>
+            </button>
+        </div>
+    </div>
+    
+    <div id="files-container">
+        <div id="files-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {% for file in files %}
+            <div class="file-card glass-effect rounded-xl shadow-lg overflow-hidden card-hover" data-file-id="{{ file.id }}">
+                <div class="relative h-32">
+                    <img src="{{ file.thumbnail_url or 'https://placehold.co/280x140/1f2937/374151?text=Sem+Thumb' }}" 
+                         alt="Thumbnail" class="w-full h-full object-cover">
+                    <div class="absolute top-2 right-2">
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full {{ 'bg-purple-600' if file.media_type == 'audio' else 'bg-blue-600' }} text-white">
+                            {{ 'Áudio' if file.media_type == 'audio' else 'Vídeo' }}
+                        </span>
+                    </div>
+                    <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                        {{ file.duration_string }}
+                    </div>
+                    {% if not file.file_exists %}
+                    <div class="absolute inset-0 bg-red-900/80 flex items-center justify-center">
+                        <div class="text-center text-white">
+                            <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                            <p class="text-sm">Arquivo Ausente</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="p-3">
+                    <h3 class="font-semibold text-white mb-1 line-clamp-2 text-sm">{{ file.title }}</h3>
                     <p class="text-xs text-gray-400 mb-1">{{ file.uploader }}</p>
                     <p class="text-xs text-gray-500 mb-3">
                         {{ file.actual_size_mb if file.file_exists else 0 }} MB • {{ file.created_at.strftime('%d/%m/%Y') }}
                     </p>
-                </div>
-                
-                <div class="flex space-x-1">
-                    {% if file.file_exists %}
-                    <button class="play-media-btn flex-1 py-2 px-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-xs rounded-lg transition-all" 
-                            data-filename="{{ file.filename }}" 
-                            data-type="{{ file.media_type }}"
-                            data-title="{{ file.title }}">
-                        <i class="fas fa-play"></i>
-                    </button>
-                    <a href="{{ url_for('api.download_file', filename=file.filename) }}" 
-                       target="_blank" 
-                       class="py-2 px-2 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white text-xs rounded-lg transition-all">
-                        <i class="fas fa-download"></i>
-                    </a>
-                    {% endif %}
-                    <button class="view-metadata-btn py-2 px-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xs rounded-lg transition-all" 
-                            data-metadata='{{ {
-                                "title": file.title,
-                                "uploader": file.uploader,
-                                "duration_string": file.duration_string,
-                                "view_count": file.view_count,
-                                "like_count": file.like_count,
-                                "upload_date": file.upload_date,
-                                "webpage_url": file.original_url,
-                                "description": file.description,
-                                "thumbnail_url": file.thumbnail_url
-                            } | tojson }}'>
-                        <i class="fas fa-info"></i>
-                    </button>
-                    <button class="delete-file-btn py-2 px-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-xs rounded-lg transition-all" 
-                            data-filename="{{ file.filename }}">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    
+                    <div class="flex space-x-1">
+                        {% if file.file_exists %}
+                        <button class="play-media-btn flex-1 py-1 px-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-xs rounded transition-all" 
+                                data-filename="{{ file.filename }}" 
+                                data-type="{{ file.media_type }}"
+                                data-title="{{ file.title }}">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <a href="{{ url_for('api.download_file', filename=file.filename) }}" 
+                           target="_blank" 
+                           class="py-1 px-2 bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 text-white text-xs rounded transition-all">
+                            <i class="fas fa-download"></i>
+                        </a>
+                        {% endif %}
+                        <button class="view-metadata-btn py-1 px-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xs rounded transition-all" 
+                                data-metadata='{{ {
+                                    "title": file.title,
+                                    "uploader": file.uploader,
+                                    "duration_string": file.duration_string,
+                                    "view_count": file.view_count,
+                                    "like_count": file.like_count,
+                                    "upload_date": file.upload_date,
+                                    "webpage_url": file.original_url,
+                                    "description": file.description,
+                                    "thumbnail_url": file.thumbnail_url
+                                } | tojson }}'>
+                            <i class="fas fa-info"></i>
+                        </button>
+                        <button class="move-file-btn py-1 px-2 bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white text-xs rounded transition-all" 
+                                data-file-id="{{ file.id }}">
+                            <i class="fas fa-folder-open"></i>
+                        </button>
+                        <button class="delete-file-btn py-1 px-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-xs rounded transition-all" 
+                                data-filename="{{ file.filename }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
+            {% else %}
+            <div class="col-span-full text-center py-16 text-gray-500">
+                <i class="fas fa-folder-open text-6xl mb-4 block"></i>
+                <p class="text-xl">Nenhum arquivo encontrado.</p>
+                <p class="text-sm mt-2">Faça o primeiro download usando a API!</p>
+            </div>
+            {% endfor %}
         </div>
-        {% else %}
-        <div class="col-span-full text-center py-16 text-gray-500">
-            <i class="fas fa-folder-open text-6xl mb-4 block"></i>
-            <p class="text-xl">Nenhum ficheiro encontrado.</p>
-            <p class="text-sm mt-2">Faça o primeiro download usando a API!</p>
+        
+        <!-- Pagination -->
+        <div class="mt-6 flex justify-center">
+            <div id="pagination" class="flex space-x-2"></div>
         </div>
-        {% endfor %}
     </div>
 </section>
+
+<!-- New Folder Modal -->
+<div id="new-folder-modal" class="modal fixed inset-0 bg-black/70 items-center justify-center z-50">
+    <div class="glass-effect rounded-xl shadow-2xl w-full max-w-md">
+        <div class="flex justify-between items-center p-6 border-b border-gray-600">
+            <h3 class="text-xl font-bold text-cyan-300">Nova Pasta</h3>
+            <button class="close-modal-btn text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div class="p-6">
+            <form id="new-folder-form">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Nome da Pasta</label>
+                    <input type="text" name="folder_name" required class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                </div>
+                <div class="flex space-x-3">
+                    <button type="button" class="close-modal-btn flex-1 py-2 px-4 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-all">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 py-2 px-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg transition-all">
+                        Criar Pasta
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Batch Download Modal -->
+<div id="batch-download-modal" class="modal fixed inset-0 bg-black/70 items-center justify-center z-50">
+    <div class="glass-effect rounded-xl shadow-2xl w-full max-w-2xl">
+        <div class="flex justify-between items-center p-6 border-b border-gray-600">
+            <h3 class="text-xl font-bold text-cyan-300">Download em Lote</h3>
+            <button class="close-modal-btn text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div class="p-6">
+            <form id="batch-download-form">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Nome do Lote</label>
+                        <input type="text" name="batch_name" required class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Tipo</label>
+                        <select name="type" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                            <option value="audio">Áudio (MP3)</option>
+                            <option value="video">Vídeo (MP4)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Qualidade (Vídeo)</label>
+                        <input type="text" name="quality" placeholder="Ex: 720p (opcional)" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Bitrate (Áudio)</label>
+                        <input type="text" name="bitrate" placeholder="Ex: 192k (opcional)" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Pasta de Destino</label>
+                    <select name="folder_id" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                        <option value="">Raiz</option>
+                        {% for folder in folders %}
+                        <option value="{{ folder.id }}">{{ folder.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-400 mb-2">URLs (uma por linha)</label>
+                    <textarea name="urls" rows="8" placeholder="https://youtube.com/watch?v=...&#10;https://youtube.com/playlist?list=...&#10;..." required class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Suporta URLs individuais e playlists do YouTube</p>
+                </div>
+                <div class="flex space-x-3">
+                    <button type="button" class="close-modal-btn flex-1 py-2 px-4 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-all">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 py-2 px-4 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg transition-all">
+                        Iniciar Download
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Move File Modal -->
+<div id="move-file-modal" class="modal fixed inset-0 bg-black/70 items-center justify-center z-50">
+    <div class="glass-effect rounded-xl shadow-2xl w-full max-w-md">
+        <div class="flex justify-between items-center p-6 border-b border-gray-600">
+            <h3 class="text-xl font-bold text-cyan-300">Mover Arquivo</h3>
+            <button class="close-modal-btn text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div class="p-6">
+            <form id="move-file-form">
+                <input type="hidden" name="file_id" id="move-file-id">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Pasta de Destino</label>
+                    <select name="folder_id" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                        <option value="">Raiz</option>
+                        {% for folder in folders %}
+                        <option value="{{ folder.id }}">{{ folder.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex space-x-3">
+                    <button type="button" class="close-modal-btn flex-1 py-2 px-4 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-all">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 py-2 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg transition-all">
+                        Mover
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
