@@ -143,3 +143,110 @@ def delete_file():
 def cleanup_missing_files():
     removed_count = AdminService.cleanup_missing_files()
     return jsonify({'success': True, 'removed_count': removed_count})
+
+@admin_bp.route('/app-settings', methods=['POST'])
+@login_required
+def update_app_settings():
+    try:
+        DatabaseService.update_app_settings(
+            app_name=request.form.get('app_name', 'YTDL Web API'),
+            app_logo=request.form.get('app_logo', ''),
+            primary_color=request.form.get('primary_color', '#0891b2'),
+            secondary_color=request.form.get('secondary_color', '#0e7490'),
+            favicon_url=request.form.get('favicon_url', ''),
+            footer_text=request.form.get('footer_text', '© 2024 YTDL Web API')
+        )
+        flash('Configurações da aplicação salvas com sucesso!', 'success')
+    except Exception as e:
+        logging.error(f"Erro ao salvar configurações da aplicação: {e}")
+        flash('Erro ao salvar configurações da aplicação', 'error')
+    return redirect(url_for('admin.dashboard') + '#settings')
+
+@admin_bp.route('/folders/create', methods=['POST'])
+@login_required
+def create_folder():
+    folder_name = request.form.get('folder_name')
+    if folder_name:
+        DatabaseService.create_folder(folder_name)
+        return jsonify({'success': True})
+    return jsonify({'success': False}), 400
+
+@admin_bp.route('/folders/delete', methods=['POST'])
+@login_required
+def delete_folder():
+    folder_id = request.json.get('folder_id')
+    if DatabaseService.delete_folder(folder_id):
+        return jsonify({'success': True})
+    return jsonify({'success': False}), 404
+
+@admin_bp.route('/batch-download', methods=['POST'])
+@login_required
+def batch_download():
+    try:
+        batch_name = request.form.get('batch_name')
+        urls_text = request.form.get('urls')
+        media_type = request.form.get('type')
+        quality = request.form.get('quality')
+        bitrate = request.form.get('bitrate')
+        folder_id = request.form.get('folder_id')
+        
+        urls = [url.strip() for url in urls_text.split('\n') if url.strip()]
+        
+        if not urls:
+            return jsonify({'success': False, 'error': 'Nenhuma URL fornecida'}), 400
+        
+        batch = DatabaseService.create_batch_download(
+            name=batch_name,
+            urls=urls,
+            media_type=media_type,
+            quality=quality,
+            bitrate=bitrate,
+            folder_id=int(folder_id) if folder_id else None
+        )
+        
+        # TODO: Implementar processamento assíncrono do batch
+        
+        return jsonify({'success': True, 'batch_id': batch.id})
+    except Exception as e:
+        logging.error(f"Erro ao criar download em lote: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@admin_bp.route('/files/filter')
+@login_required
+def filter_files():
+    search = request.args.get('search', '')
+    folder_id = request.args.get('folder_id')
+    media_type = request.args.get('media_type')
+    sort = request.args.get('sort', 'created_at-desc')
+    
+    sort_by, sort_order = sort.split('-')
+    
+    files = DatabaseService.get_media_files(
+        folder_id=int(folder_id) if folder_id else None,
+        search=search,
+        media_type=media_type,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        limit=50
+    )
+    
+    # Verificar existência dos arquivos
+    for file in files:
+        file_path = os.path.join(Config.DOWNLOAD_FOLDER, file.filename)
+        file.file_exists = os.path.exists(file_path)
+        if file.file_exists:
+            try:
+                file.actual_size_mb = round(os.path.getsize(file_path) / (1024 * 1024), 2)
+            except:
+                file.actual_size_mb = 0
+        else:
+            file.actual_size_mb = 0
+    
+    # Renderizar apenas os cards dos arquivos
+    html = render_template('admin/components/file_cards.html', files=files)
+    
+    return jsonify({
+        'success': True,
+        'html': html,
+        'count': len(files)
+    })

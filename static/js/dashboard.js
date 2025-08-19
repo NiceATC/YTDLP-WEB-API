@@ -243,8 +243,166 @@ class Dashboard {
             }
         }, 3000);
     }
+    
+    initializeCharts() {
+        // Requests Timeline Chart
+        const requestsCtx = document.getElementById('requestsChart');
+        if (requestsCtx) {
+            new Chart(requestsCtx, {
+                type: 'line',
+                data: {
+                    labels: ['6 dias', '5 dias', '4 dias', '3 dias', '2 dias', 'Ontem', 'Hoje'],
+                    datasets: [{
+                        label: 'Requisições',
+                        data: [12, 19, 8, 15, 22, 18, 25], // Dados de exemplo
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#ffffff' }
+                        }
+                    },
+                    scales: {
+                        x: { 
+                            ticks: { color: '#9ca3af' },
+                            grid: { color: 'rgba(156, 163, 175, 0.1)' }
+                        },
+                        y: { 
+                            ticks: { color: '#9ca3af' },
+                            grid: { color: 'rgba(156, 163, 175, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Distribution Pie Chart
+        const distributionCtx = document.getElementById('distributionChart');
+        if (distributionCtx) {
+            new Chart(distributionCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Áudio', 'Vídeo'],
+                    datasets: [{
+                        data: [65, 35], // Dados de exemplo
+                        backgroundColor: ['#8b5cf6', '#3b82f6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { 
+                                color: '#ffffff',
+                                padding: 20
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
 
     setupFileManagement() {
+        // New folder modal
+        const newFolderBtn = document.querySelector('.new-folder-btn');
+        const newFolderModal = document.getElementById('new-folder-modal');
+        const newFolderForm = document.getElementById('new-folder-form');
+        
+        if (newFolderBtn) {
+            newFolderBtn.addEventListener('click', () => {
+                newFolderModal.classList.add('active');
+            });
+        }
+        
+        if (newFolderForm) {
+            newFolderForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(newFolderForm);
+                
+                try {
+                    const response = await fetch('/admin/folders/create', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        this.showNotification('Pasta criada com sucesso!', 'success');
+                        newFolderModal.classList.remove('active');
+                        setTimeout(() => location.reload(), 1000);
+                    }
+                } catch (error) {
+                    this.showNotification('Erro ao criar pasta', 'error');
+                }
+            });
+        }
+        
+        // Batch download modal
+        const batchDownloadBtn = document.querySelector('.batch-download-btn');
+        const batchDownloadModal = document.getElementById('batch-download-modal');
+        const batchDownloadForm = document.getElementById('batch-download-form');
+        
+        if (batchDownloadBtn) {
+            batchDownloadBtn.addEventListener('click', () => {
+                batchDownloadModal.classList.add('active');
+            });
+        }
+        
+        if (batchDownloadForm) {
+            batchDownloadForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(batchDownloadForm);
+                
+                try {
+                    const response = await fetch('/admin/batch-download', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        this.showNotification('Download em lote iniciado!', 'success');
+                        batchDownloadModal.classList.remove('active');
+                    }
+                } catch (error) {
+                    this.showNotification('Erro ao iniciar download em lote', 'error');
+                }
+            });
+        }
+        
+        // File search and filters
+        const searchInput = document.getElementById('file-search');
+        const folderFilter = document.getElementById('folder-filter');
+        const typeFilter = document.getElementById('type-filter');
+        const sortFilter = document.getElementById('sort-filter');
+        
+        [searchInput, folderFilter, typeFilter, sortFilter].forEach(element => {
+            if (element) {
+                element.addEventListener('change', () => this.filterFiles());
+                if (element === searchInput) {
+                    element.addEventListener('input', () => this.debounce(() => this.filterFiles(), 300));
+                }
+            }
+        });
+        
+        // Move file handlers
+        document.querySelectorAll('.move-file-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const fileId = button.dataset.fileId;
+                document.getElementById('move-file-id').value = fileId;
+                document.getElementById('move-file-modal').classList.add('active');
+            });
+        });
+
         // Delete file handlers
         document.querySelectorAll('.delete-file-btn').forEach(button => {
             button.addEventListener('click', async () => {
@@ -300,6 +458,42 @@ class Dashboard {
                 }
             });
         }
+    }
+    
+    filterFiles() {
+        const search = document.getElementById('file-search').value;
+        const folder = document.getElementById('folder-filter').value;
+        const type = document.getElementById('type-filter').value;
+        const sort = document.getElementById('sort-filter').value;
+        
+        const params = new URLSearchParams({
+            search,
+            folder_id: folder,
+            media_type: type,
+            sort: sort
+        });
+        
+        fetch(`/admin/files/filter?${params}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('files-grid').innerHTML = data.html;
+                document.getElementById('files-count').textContent = data.count;
+            })
+            .catch(error => {
+                this.showNotification('Erro ao filtrar arquivos', 'error');
+            });
+    }
+    
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
     }
 
     setupHistoryManagement() {
