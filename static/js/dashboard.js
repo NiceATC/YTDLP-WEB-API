@@ -696,12 +696,11 @@ class Dashboard {
             setTimeout(() => notification.remove(), 500);
         }, 3000);
     }
-}
 
-addFolderToInterface(folder) {
-    const foldersGrid = document.getElementById('folders-grid');
-    if (foldersGrid) {
-        const folderHtml = `
+    addFolderToInterface(folder) {
+        const foldersGrid = document.getElementById('folders-grid');
+        if (foldersGrid) {
+            const folderHtml = `
             <div class="folder-item glass-effect p-4 rounded-lg cursor-pointer hover:bg-gray-700/30 transition-all group" data-folder-id="${folder.id}">
                 <div class="text-center">
                     <i class="fas fa-folder text-3xl text-blue-400 mb-2"></i>
@@ -713,34 +712,39 @@ addFolderToInterface(folder) {
                 </button>
             </div>
         `;
-        foldersGrid.insertAdjacentHTML('beforeend', folderHtml);
-        
-        // Adicionar event listener para o botão de delete
-        const deleteBtn = foldersGrid.querySelector(`[data-folder-id="${folder.id}"] .delete-folder-btn`);
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                if (confirm('Tem certeza que deseja deletar esta pasta?')) {
-                    try {
-                        const response = await fetch('/admin/folders/delete', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ folder_id: folder.id })
-                        });
-                        
-                        const result = await response.json();
-                        if (result.success) {
-                            deleteBtn.closest('.folder-item').remove();
-                            this.showNotification('Pasta deletada com sucesso!', 'success');
-                        } else {
-                            this.showNotification(result.error || 'Erro ao deletar pasta', 'error');
+            foldersGrid.insertAdjacentHTML('beforeend', folderHtml);
+
+            // Adicionar event listener para o botão de delete
+            const deleteBtn = foldersGrid.querySelector(`[data-folder-id="${folder.id}"] .delete-folder-btn`);
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if (confirm('Tem certeza que deseja deletar esta pasta?')) {
+                        try {
+                            const response = await fetch('/admin/folders/delete', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    folder_id: folder.id
+                                })
+                            });
+
+                            const result = await response.json();
+                            if (result.success) {
+                                deleteBtn.closest('.folder-item').remove();
+                                this.showNotification('Pasta deletada com sucesso!', 'success');
+                            } else {
+                                this.showNotification(result.error || 'Erro ao deletar pasta', 'error');
+                            }
+                        } catch (error) {
+                            console.error('Erro ao deletar pasta:', error);
+                            this.showNotification('Erro ao deletar pasta', 'error');
                         }
-                    } catch (error) {
-                        console.error('Erro ao deletar pasta:', error);
-                        this.showNotification('Erro ao deletar pasta', 'error');
                     }
-                }
-            });
+                });
+            }
         }
     }
 }
