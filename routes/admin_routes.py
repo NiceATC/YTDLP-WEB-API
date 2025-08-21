@@ -14,15 +14,7 @@ admin_bp = Blueprint('admin', __name__)
 @login_required
 def dashboard():
     if session.get('force_change'):
-    return render_template(
-        'admin/dashboard.html',
-        force_change=True,
-        stats={
-            "chart_data": [],
-            "audio_requests": 0,
-            "video_requests": 0
-        }
-    )
+    return render_template('admin/dashboard.html', force_change=True, stats={"chart_data": [],"audio_requests": 0,"video_requests": 0})
     try:
         history = AdminService.get_processed_history()
         settings = Config.get_settings()
