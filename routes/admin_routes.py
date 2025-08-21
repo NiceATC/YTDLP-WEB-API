@@ -24,10 +24,14 @@ def dashboard():
         cookie_status = FileService.check_cookie_status()
         stats = AdminService.get_dashboard_stats()
         files = AdminService.get_downloaded_files()
+        folders = DatabaseService.get_folders()
+        app_settings = DatabaseService.get_app_settings()
         
         return render_template('admin/dashboard.html', 
                                history=history, 
                                files=files, 
+                               folders=folders,
+                               app_settings=app_settings,
                                settings=settings,
                                api_keys=api_keys,
                                cookie_file_exists=cookie_file_exists,
@@ -165,19 +169,39 @@ def update_app_settings():
 @admin_bp.route('/folders/create', methods=['POST'])
 @login_required
 def create_folder():
-    folder_name = request.form.get('folder_name')
-    if folder_name:
-        DatabaseService.create_folder(folder_name)
-        return jsonify({'success': True})
-    return jsonify({'success': False}), 400
+    try:
+        folder_name = request.form.get('folder_name')
+        if not folder_name or not folder_name.strip():
+            return jsonify({'success': False, 'error': 'Nome da pasta é obrigatório'}), 400
+        
+        folder = DatabaseService.create_folder(folder_name.strip())
+        return jsonify({
+            'success': True, 
+            'folder': {
+                'id': folder.id,
+                'name': folder.name,
+                'created_at': folder.created_at.strftime('%d/%m/%Y')
+            }
+        })
+    except Exception as e:
+        logging.error(f"Erro ao criar pasta: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @admin_bp.route('/folders/delete', methods=['POST'])
 @login_required
 def delete_folder():
-    folder_id = request.json.get('folder_id')
-    if DatabaseService.delete_folder(folder_id):
-        return jsonify({'success': True})
-    return jsonify({'success': False}), 404
+    try:
+        folder_id = request.json.get('folder_id')
+        if not folder_id:
+            return jsonify({'success': False, 'error': 'ID da pasta é obrigatório'}), 400
+        
+        if DatabaseService.delete_folder(int(folder_id)):
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Pasta não encontrada'}), 404
+    except Exception as e:
+        logging.error(f"Erro ao deletar pasta: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @admin_bp.route('/batch-download', methods=['POST'])
 @login_required
@@ -189,6 +213,9 @@ def batch_download():
         quality = request.form.get('quality')
         bitrate = request.form.get('bitrate')
         folder_id = request.form.get('folder_id')
+        
+        if not batch_name or not urls_text or not media_type:
+            return jsonify({'success': False, 'error': 'Campos obrigatórios não preenchidos'}), 400
         
         urls = [url.strip() for url in urls_text.split('\n') if url.strip()]
         
@@ -204,7 +231,14 @@ def batch_download():
             folder_id=int(folder_id) if folder_id else None
         )
         
-        # TODO: Implementar processamento assíncrono do batch
+        # Processar URLs em background (implementação básica)
+        from tasks import process_media
+        for url in urls:
+            try:
+                task = process_media.delay(url, media_type, quality, bitrate)
+                logging.info(f"Tarefa de batch iniciada: {task.id} para URL: {url}")
+            except Exception as e:
+                logging.error(f"Erro ao iniciar tarefa para URL {url}: {e}")
         
         return jsonify({'success': True, 'batch_id': batch.id})
     except Exception as e:

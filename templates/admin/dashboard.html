@@ -70,5 +70,15 @@
     {% endif %}
 
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script>
+        // Dados para os gráficos
+        window.dashboardData = {
+            chart_data: {{ stats.chart_data | tojson }},
+            stats: {
+                audio_requests: {{ stats.audio_requests }},
+                video_requests: {{ stats.video_requests }}
+            }
+        };
+    </script>
 </body>
 </html>

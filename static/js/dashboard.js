@@ -248,13 +248,17 @@ class Dashboard {
         // Requests Timeline Chart
         const requestsCtx = document.getElementById('requestsChart');
         if (requestsCtx) {
+            const chartData = window.dashboardData?.chart_data || [];
+            const labels = chartData.map(d => d.date);
+            const data = chartData.map(d => d.requests);
+            
             new Chart(requestsCtx, {
                 type: 'line',
                 data: {
-                    labels: ['6 dias', '5 dias', '4 dias', '3 dias', '2 dias', 'Ontem', 'Hoje'],
+                    labels: labels.length ? labels : ['Sem dados'],
                     datasets: [{
                         label: 'Requisições',
-                        data: [12, 19, 8, 15, 22, 18, 25], // Dados de exemplo
+                        data: data.length ? data : [0],
                         borderColor: '#06b6d4',
                         backgroundColor: 'rgba(6, 182, 212, 0.1)',
                         tension: 0.4,
@@ -286,12 +290,16 @@ class Dashboard {
         // Distribution Pie Chart
         const distributionCtx = document.getElementById('distributionChart');
         if (distributionCtx) {
+            const stats = window.dashboardData?.stats || {};
+            const audioCount = stats.audio_requests || 0;
+            const videoCount = stats.video_requests || 0;
+            
             new Chart(distributionCtx, {
                 type: 'doughnut',
                 data: {
                     labels: ['Áudio', 'Vídeo'],
                     datasets: [{
-                        data: [65, 35], // Dados de exemplo
+                        data: [audioCount, videoCount],
                         backgroundColor: ['#8b5cf6', '#3b82f6'],
                         borderWidth: 0
                     }]
@@ -336,12 +344,20 @@ class Dashboard {
                         body: formData
                     });
                     
-                    if (response.ok) {
+                    const result = await response.json();
+                    
+                    if (result.success) {
                         this.showNotification('Pasta criada com sucesso!', 'success');
                         newFolderModal.classList.remove('active');
-                        setTimeout(() => location.reload(), 1000);
+                        newFolderForm.reset();
+                        
+                        // Adicionar pasta à interface
+                        this.addFolderToInterface(result.folder);
+                    } else {
+                        this.showNotification(result.error || 'Erro ao criar pasta', 'error');
                     }
                 } catch (error) {
+                    console.error('Erro ao criar pasta:', error);
                     this.showNotification('Erro ao criar pasta', 'error');
                 }
             });
@@ -369,11 +385,17 @@ class Dashboard {
                         body: formData
                     });
                     
-                    if (response.ok) {
+                    const result = await response.json();
+                    
+                    if (result.success) {
                         this.showNotification('Download em lote iniciado!', 'success');
                         batchDownloadModal.classList.remove('active');
+                        batchDownloadForm.reset();
+                    } else {
+                        this.showNotification(result.error || 'Erro ao iniciar download em lote', 'error');
                     }
                 } catch (error) {
+                    console.error('Erro ao iniciar download em lote:', error);
                     this.showNotification('Erro ao iniciar download em lote', 'error');
                 }
             });
@@ -673,6 +695,53 @@ class Dashboard {
             notification.style.opacity = '0';
             setTimeout(() => notification.remove(), 500);
         }, 3000);
+    }
+}
+
+addFolderToInterface(folder) {
+    const foldersGrid = document.getElementById('folders-grid');
+    if (foldersGrid) {
+        const folderHtml = `
+            <div class="folder-item glass-effect p-4 rounded-lg cursor-pointer hover:bg-gray-700/30 transition-all group" data-folder-id="${folder.id}">
+                <div class="text-center">
+                    <i class="fas fa-folder text-3xl text-blue-400 mb-2"></i>
+                    <p class="text-sm text-white">${folder.name}</p>
+                    <p class="text-xs text-gray-400">0 arquivos</p>
+                </div>
+                <button class="delete-folder-btn absolute top-2 right-2 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity" data-folder-id="${folder.id}">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            </div>
+        `;
+        foldersGrid.insertAdjacentHTML('beforeend', folderHtml);
+        
+        // Adicionar event listener para o botão de delete
+        const deleteBtn = foldersGrid.querySelector(`[data-folder-id="${folder.id}"] .delete-folder-btn`);
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (confirm('Tem certeza que deseja deletar esta pasta?')) {
+                    try {
+                        const response = await fetch('/admin/folders/delete', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ folder_id: folder.id })
+                        });
+                        
+                        const result = await response.json();
+                        if (result.success) {
+                            deleteBtn.closest('.folder-item').remove();
+                            this.showNotification('Pasta deletada com sucesso!', 'success');
+                        } else {
+                            this.showNotification(result.error || 'Erro ao deletar pasta', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Erro ao deletar pasta:', error);
+                        this.showNotification('Erro ao deletar pasta', 'error');
+                    }
+                }
+            });
+        }
     }
 }
 

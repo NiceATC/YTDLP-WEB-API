@@ -58,6 +58,16 @@ class AdminService:
         missing_files = len([f for f in files if not f.file_exists])
         total_size_mb = sum([f.actual_size_mb for f in files if f.file_exists])
         
+        # Dados para gráficos - últimos 7 dias
+        chart_data = []
+        for i in range(6, -1, -1):
+            date = now - timedelta(days=i)
+            day_requests = len([h for h in history if h.created_at.date() == date.date()])
+            chart_data.append({
+                'date': date.strftime('%d/%m'),
+                'requests': day_requests
+            })
+        
         return {
             'total_requests': total_requests,
             'successful_requests': successful_requests,
@@ -73,6 +83,7 @@ class AdminService:
             'total_files': total_files,
             'missing_files': missing_files,
             'total_size_mb': round(total_size_mb, 2),
+            'chart_data': chart_data,
             'week_comparison': {
                 'requests_change': recent_total - (total_requests - recent_total) if (total_requests - recent_total) > 0 else recent_total,
                 'success_change': recent_successful - (successful_requests - recent_successful) if (successful_requests - recent_successful) > 0 else recent_successful
