@@ -16,7 +16,8 @@ Uma API REST em Flask + Celery + yt-dlp para baixar vídeos ou áudios do YouTub
 
 ---
 
-<img width="1910" height="880" alt="image" src="https://github.com/user-attachments/assets/f25967ec-4f07-4d26-9a0e-bb9bee7e31c2" />
+<img width="1910" height="885" alt="image" src="https://github.com/user-attachments/assets/077b8b9a-6d08-475d-aebb-b2a7ec9ceaed" />
+
 
 
 ## 🚀 Como usar
