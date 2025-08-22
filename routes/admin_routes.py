@@ -141,6 +141,67 @@ def delete_file():
         logging.error(f"Erro ao deletar arquivo {filename}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@admin_bp.route('/files/move', methods=['POST'])
+@login_required
+def move_file():
+    try:
+        file_id = request.form.get('file_id')
+        folder_id = request.form.get('folder_id')
+        
+        if not file_id:
+            return jsonify({'success': False, 'error': 'ID do arquivo é obrigatório'}), 400
+        
+        # Convert empty string to None for root folder
+        folder_id = int(folder_id) if folder_id else None
+        
+        if DatabaseService.move_file_to_folder(int(file_id), folder_id):
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Arquivo não encontrado'}), 404
+    except Exception as e:
+        logging.error(f"Erro ao mover arquivo: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@admin_bp.route('/files/filter')
+@login_required
+def filter_files():
+    search = request.args.get('search', '')
+    folder_id = request.args.get('folder_id')
+    media_type = request.args.get('media_type')
+    sort = request.args.get('sort', 'created_at-desc')
+    
+    sort_by, sort_order = sort.split('-')
+    
+    files = DatabaseService.get_media_files(
+        folder_id=int(folder_id) if folder_id else None,
+        search=search,
+        media_type=media_type,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        limit=50
+    )
+    
+    # Verificar existência dos arquivos
+    for file in files:
+        file_path = os.path.join(Config.DOWNLOAD_FOLDER, file.filename)
+        file.file_exists = os.path.exists(file_path)
+        if file.file_exists:
+            try:
+                file.actual_size_mb = round(os.path.getsize(file_path) / (1024 * 1024), 2)
+            except:
+                file.actual_size_mb = 0
+        else:
+            file.actual_size_mb = 0
+    
+    # Renderizar apenas os cards dos arquivos
+    html = render_template('admin/components/file_cards.html', files=files)
+    
+    return jsonify({
+        'success': True,
+        'html': html,
+        'count': len(files)
+    })
+
 @admin_bp.route('/files/cleanup', methods=['POST'])
 @login_required
 def cleanup_missing_files():

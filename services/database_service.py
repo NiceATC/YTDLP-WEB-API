@@ -262,6 +262,17 @@ class DatabaseService:
                 return True
             return False
     
+    @staticmethod
+    def move_file_to_folder(file_id: int, folder_id: int = None) -> bool:
+        """Move um arquivo para uma pasta"""
+        with DatabaseService.get_session() as db:
+            media_file = db.query(MediaFile).filter(MediaFile.id == file_id).first()
+            if media_file:
+                media_file.folder_id = folder_id
+                db.commit()
+                return True
+            return False
+    
     # Cookie Management
     @staticmethod
     def save_cookie_file(content: bytes, filename: str = 'cookies.txt') -> CookieFile:

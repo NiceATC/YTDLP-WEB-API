@@ -101,3 +101,62 @@
         </div>
     </div>
 </section>
+
+<!-- Batch Download Modal -->
+<div id="batch-download-modal" class="modal fixed inset-0 bg-black/70 items-center justify-center z-50">
+    <div class="glass-effect rounded-xl shadow-2xl w-full max-w-2xl">
+        <div class="flex justify-between items-center p-6 border-b border-gray-600">
+            <h3 class="text-xl font-bold text-cyan-300">Download em Lote</h3>
+            <button class="close-modal-btn text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div class="p-6">
+            <form id="batch-download-form">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Nome do Lote</label>
+                        <input type="text" name="batch_name" required class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Tipo</label>
+                        <select name="type" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                            <option value="audio">Áudio (MP3)</option>
+                            <option value="video">Vídeo (MP4)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Qualidade (Vídeo)</label>
+                        <input type="text" name="quality" placeholder="Ex: 720p (opcional)" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Bitrate (Áudio)</label>
+                        <input type="text" name="bitrate" placeholder="Ex: 192k (opcional)" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Pasta de Destino</label>
+                    <select name="folder_id" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                        <option value="">Raiz</option>
+                        {% for folder in folders %}
+                        <option value="{{ folder.id }}">{{ folder.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-400 mb-2">URLs (uma por linha)</label>
+                    <textarea name="urls" rows="8" placeholder="https://youtube.com/watch?v=...&#10;https://youtube.com/playlist?list=...&#10;..." required class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Suporta URLs individuais e playlists do YouTube</p>
+                </div>
+                <div class="flex space-x-3">
+                    <button type="button" class="close-modal-btn flex-1 py-2 px-4 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-all">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 py-2 px-4 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg transition-all">
+                        Iniciar Download
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
