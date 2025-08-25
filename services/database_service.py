@@ -207,6 +207,9 @@ class DatabaseService:
             
             # Filter by folder
             if folder_id is not None:
+                if folder_id == 0:  # Root folder
+                    query = query.filter(MediaFile.folder_id.is_(None))
+                else:
                 query = query.filter(MediaFile.folder_id == folder_id)
             
             # Search filter
@@ -241,6 +244,9 @@ class DatabaseService:
             query = db.query(MediaFile)
             
             if folder_id is not None:
+                if folder_id == 0:  # Root folder
+                    query = query.filter(MediaFile.folder_id.is_(None))
+                else:
                 query = query.filter(MediaFile.folder_id == folder_id)
             if search:
                 query = query.filter(

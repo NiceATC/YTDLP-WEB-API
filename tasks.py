@@ -43,6 +43,8 @@ def process_media(self, url, media_type, quality=None, bitrate=None):
             'noplaylist': True,
             'quiet': True,
             'writeinfojson': True,
+            'extract_flat': False,
+            'ignoreerrors': True,
         }
         
         cookies_path = ensure_cookies_available()
@@ -67,11 +69,24 @@ def process_media(self, url, media_type, quality=None, bitrate=None):
         logger.info(f"Tarefa {self.request.id}: Iniciando download e processamento com yt-dlp...")
         logger.info(f"Tarefa {self.request.id}: Opções do yt-dlp: {json.dumps(ydl_opts, indent=2)}")
         
+        # Handle playlist URLs
+        if 'playlist' in url.lower() or 'list=' in url:
+            logger.info(f"Tarefa {self.request.id}: Detectada playlist, processando individualmente...")
+            ydl_opts['noplaylist'] = False
+            ydl_opts['playlistend'] = 50  # Limit to 50 videos max
+        
         with YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
-        logger.info(f"Tarefa {self.request.id}: Processamento do yt-dlp concluido.")
+            
+        # Handle playlist results
+        if 'entries' in info_dict:
+            logger.info(f"Tarefa {self.request.id}: Playlist com {len(info_dict['entries'])} itens processada")
+            # For playlists, use the first entry as the main info
+            final_info = info_dict['entries'][0] if info_dict['entries'] else info_dict
+        else:
+            final_info = info_dict
 
-        final_info = info_dict
+        logger.info(f"Tarefa {self.request.id}: Processamento do yt-dlp concluido.")
 
         processed_filepath = f"{temp_base_path}{final_extension}"
         output_filename = f"{uuid.uuid4()}{final_extension}"

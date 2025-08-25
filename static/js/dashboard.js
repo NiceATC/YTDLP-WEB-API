@@ -17,6 +17,7 @@ class Dashboard {
         this.batchManager = new BatchManager(this);
         this.apiTester = new ApiTester(this);
         this.historyManager = new HistoryManager(this);
+        this.settingsManager = new SettingsManager(this);
     }
 
     setupNavigation() {

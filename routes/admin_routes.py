@@ -54,20 +54,36 @@ def update_settings():
 @admin_bp.route('/api-keys/new', methods=['POST'])
 @login_required
 def new_api_key():
-    name = request.form.get('name', '')
-    api_key = DatabaseService.create_api_key(name)
-    flash(f'Nova chave de API criada: {api_key.key}', 'success')
-    return redirect(url_for('admin.dashboard') + '#settings')
+    try:
+        name = request.form.get('name', '') or request.json.get('name', '')
+        api_key = DatabaseService.create_api_key(name)
+        
+        return jsonify({
+            'success': True,
+            'api_key': {
+                'id': api_key.id,
+                'key': api_key.key,
+                'name': api_key.name,
+                'created_at': api_key.created_at.strftime('%d/%m/%Y %H:%M'),
+                'last_used': None
+            }
+        })
+    except Exception as e:
+        logging.error(f"Erro ao criar API key: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @admin_bp.route('/api-keys/delete', methods=['POST'])
 @login_required
 def delete_api_key():
-    key_to_delete = request.form.get('api_key')
-    if DatabaseService.delete_api_key(key_to_delete):
-        flash('Chave de API removida com sucesso!', 'success')
-    else:
-        flash('Chave de API não encontrada.', 'error')
-    return redirect(url_for('admin.dashboard') + '#settings')
+    try:
+        key_to_delete = request.form.get('api_key') or request.json.get('api_key')
+        if DatabaseService.delete_api_key(key_to_delete):
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Chave não encontrada'}), 404
+    except Exception as e:
+        logging.error(f"Erro ao deletar API key: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @admin_bp.route('/cookies/sync', methods=['POST'])
 @login_required
@@ -87,15 +103,18 @@ def sync_cookies():
 @admin_bp.route('/cookies/delete', methods=['POST'])
 @login_required
 def delete_cookie_file():
-    if DatabaseService.delete_cookie_file():
-        cookies_path = os.path.join(os.getcwd(), 'cookies.txt')
-        if os.path.exists(cookies_path):
-            os.remove(cookies_path)
-            logging.info("Arquivo de cookies removido do filesystem")
-        flash('Ficheiro de cookies removido com sucesso.', 'success')
-    else:
-        flash('Nenhum ficheiro de cookies para remover.', 'info')
-    return redirect(url_for('admin.dashboard') + '#settings')
+    try:
+        if DatabaseService.delete_cookie_file():
+            cookies_path = os.path.join(os.getcwd(), 'cookies.txt')
+            if os.path.exists(cookies_path):
+                os.remove(cookies_path)
+                logging.info("Arquivo de cookies removido do filesystem")
+            return jsonify({'success': True, 'message': 'Cookies removidos com sucesso'})
+        else:
+            return jsonify({'success': False, 'error': 'Nenhum arquivo de cookies para remover'}), 404
+    except Exception as e:
+        logging.error(f"Erro ao deletar cookies: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @admin_bp.route('/test-api', methods=['POST'])
 @login_required
@@ -212,7 +231,7 @@ def cleanup_missing_files():
 @login_required
 def update_app_settings():
     try:
-        DatabaseService.update_app_settings(
+        app_settings = DatabaseService.update_app_settings(
             app_name=request.form.get('app_name', 'YTDL Web API'),
             app_logo=request.form.get('app_logo', ''),
             primary_color=request.form.get('primary_color', '#0891b2'),
@@ -220,11 +239,22 @@ def update_app_settings():
             favicon_url=request.form.get('favicon_url', ''),
             footer_text=request.form.get('footer_text', '© 2024 YTDL Web API')
         )
+        
+        # Apply settings immediately to session for instant feedback
+        session['app_settings'] = {
+            'app_name': app_settings.app_name,
+            'app_logo': app_settings.app_logo,
+            'primary_color': app_settings.primary_color,
+            'secondary_color': app_settings.secondary_color,
+            'favicon_url': app_settings.favicon_url,
+            'footer_text': app_settings.footer_text
+        }
+        
         flash('Configurações da aplicação salvas com sucesso!', 'success')
+        return jsonify({'success': True, 'settings': session['app_settings']})
     except Exception as e:
         logging.error(f"Erro ao salvar configurações da aplicação: {e}")
-        flash('Erro ao salvar configurações da aplicação', 'error')
-    return redirect(url_for('admin.dashboard') + '#settings')
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @admin_bp.route('/folders/create', methods=['POST'])
 @login_required
