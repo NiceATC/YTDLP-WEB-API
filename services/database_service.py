@@ -210,7 +210,7 @@ class DatabaseService:
                 if folder_id == 0:  # Root folder
                     query = query.filter(MediaFile.folder_id.is_(None))
                 else:
-                query = query.filter(MediaFile.folder_id == folder_id)
+                    query = query.filter(MediaFile.folder_id == folder_id)
             
             # Search filter
             if search:
@@ -247,7 +247,7 @@ class DatabaseService:
                 if folder_id == 0:  # Root folder
                     query = query.filter(MediaFile.folder_id.is_(None))
                 else:
-                query = query.filter(MediaFile.folder_id == folder_id)
+                    query = query.filter(MediaFile.folder_id == folder_id)
             if search:
                 query = query.filter(
                     MediaFile.title.ilike(f'%{search}%') |
