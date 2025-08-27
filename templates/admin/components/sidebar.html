@@ -1,8 +1,13 @@
 <!-- Sidebar Component -->
 <aside class="w-64 glass-effect p-6 flex flex-col justify-between shadow-2xl">
     <div>
-        <h1 class="text-2xl font-bold text-cyan-400 mb-8 text-center">
-            <i class="fas fa-download mr-2"></i>Painel Admin
+        <h1 class="text-2xl font-bold text-cyan-400 mb-8 text-center flex items-center justify-center">
+            {% if app_settings and app_settings.app_logo %}
+                <img src="{{ app_settings.app_logo }}" alt="Logo" class="w-8 h-8 mr-2 rounded">
+            {% else %}
+                <i class="fas fa-download mr-2"></i>
+            {% endif %}
+            <span class="truncate">{{ app_settings.app_name if app_settings else 'YTDL Web API' }}</span>
         </h1>
         <nav id="sidebar-nav" class="flex flex-col space-y-2">
             <a href="#overview" class="sidebar-link p-3 rounded-lg text-gray-300">

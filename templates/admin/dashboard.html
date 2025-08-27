@@ -3,12 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
+    <title>{{ app_settings.app_name if app_settings else 'YTDL Web API' }} - Admin Dashboard</title>
+    {% if app_settings and app_settings.favicon_url %}
+    <link rel="icon" type="image/x-icon" href="{{ app_settings.favicon_url }}">
+    {% endif %}
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    
+    {% if app_settings %}
+    <style>
+        :root {
+            --primary-color: {{ app_settings.primary_color or '#0891b2' }};
+            --secondary-color: {{ app_settings.secondary_color or '#0e7490' }};
+        }
+        
+        .bg-gradient-to-r.from-cyan-600.to-cyan-700,
+        .bg-gradient-to-r.from-cyan-600.to-cyan-700:hover {
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color)) !important;
+        }
+        
+        .text-cyan-300, .text-cyan-400 {
+            color: var(--primary-color) !important;
+        }
+        
+        .border-cyan-500, .ring-cyan-500 {
+            border-color: var(--primary-color) !important;
+        }
+        
+        .sidebar-link.active {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%) !important;
+        }
+    </style>
+    {% endif %}
     
     <!-- Load component scripts -->
     <script src="{{ url_for('static', filename='js/components/modal-manager.js') }}"></script>

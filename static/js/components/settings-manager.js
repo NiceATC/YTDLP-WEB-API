@@ -224,15 +224,46 @@ class SettingsManager {
 
     applyBrandingChanges(settings) {
         // Apply changes to current page
-        document.title = settings.app_name;
+        document.title = `${settings.app_name} - Admin Dashboard`;
         
         // Update any visible branding elements
-        const brandElements = document.querySelectorAll('[data-brand="app-name"]');
-        brandElements.forEach(el => el.textContent = settings.app_name);
+        const sidebarTitle = document.querySelector('aside h1 span');
+        if (sidebarTitle) sidebarTitle.textContent = settings.app_name;
+        
+        // Update logo
+        const logoContainer = document.querySelector('aside h1');
+        if (logoContainer && settings.app_logo) {
+            const existingLogo = logoContainer.querySelector('img');
+            const existingIcon = logoContainer.querySelector('i');
+            
+            if (existingIcon) existingIcon.remove();
+            
+            if (existingLogo) {
+                existingLogo.src = settings.app_logo;
+            } else {
+                const logoImg = document.createElement('img');
+                logoImg.src = settings.app_logo;
+                logoImg.alt = 'Logo';
+                logoImg.className = 'w-8 h-8 mr-2 rounded';
+                logoContainer.insertBefore(logoImg, logoContainer.querySelector('span'));
+            }
+        }
         
         // Update CSS custom properties if needed
         document.documentElement.style.setProperty('--primary-color', settings.primary_color);
         document.documentElement.style.setProperty('--secondary-color', settings.secondary_color);
+        
+        // Update favicon
+        if (settings.favicon_url) {
+            let favicon = document.querySelector('link[rel="icon"]');
+            if (!favicon) {
+                favicon = document.createElement('link');
+                favicon.rel = 'icon';
+                favicon.type = 'image/x-icon';
+                document.head.appendChild(favicon);
+            }
+            favicon.href = settings.favicon_url;
+        }
     }
 
     addApiKeyToList(apiKey) {

@@ -46,7 +46,16 @@ class ApiTester {
                     this.pollTaskStatus(result.task_id, addLog);
                 } else if (result.status === 'completed') {
                     addLog('Tarefa concluída com sucesso!', 'success');
-                    addLog(`URL para Download: <a href="${result.result.download_url}" class="text-cyan-400 hover:underline" target="_blank">${result.result.download_url}</a>`);
+                    
+                    if (result.result.playlist) {
+                        addLog(`Playlist processada: ${result.result.playlist.playlist_count} vídeos baixados`, 'success');
+                        result.result.playlist.videos.forEach((video, index) => {
+                            addLog(`${index + 1}. <a href="${video.download_url}" class="text-cyan-400 hover:underline" target="_blank">${video.title}</a>`);
+                        });
+                    } else {
+                        addLog(`URL para Download: <a href="${result.result.download_url}" class="text-cyan-400 hover:underline" target="_blank">${result.result.download_url}</a>`);
+                    }
+                    
                 }
             } catch (error) {
                 addLog(`Erro na requisição inicial: ${error.message}`, 'error');
@@ -67,7 +76,15 @@ class ApiTester {
                 }
                 if (result.status === 'completed') {
                     addLog('Tarefa concluída com sucesso!', 'success');
-                    addLog(`URL para Download: <a href="${result.result.download_url}" class="text-cyan-400 hover:underline" target="_blank">${result.result.download_url}</a>`);
+                    
+                    if (result.result.playlist) {
+                        addLog(`Playlist processada: ${result.result.playlist.playlist_count} vídeos baixados`, 'success');
+                        result.result.playlist.videos.forEach((video, index) => {
+                            addLog(`${index + 1}. <a href="${video.download_url}" class="text-cyan-400 hover:underline" target="_blank">${video.title}</a>`);
+                        });
+                    } else {
+                        addLog(`URL para Download: <a href="${result.result.download_url}" class="text-cyan-400 hover:underline" target="_blank">${result.result.download_url}</a>`);
+                    }
                     clearInterval(intervalId);
                     
                     // Refresh page to show new file

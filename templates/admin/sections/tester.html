@@ -78,11 +78,28 @@
                 </div>
                 <div>
                     <label for="quality" class="block text-sm font-medium text-gray-400 mb-2">Qualidade (Vídeo)</label>
-                    <input type="text" name="quality" id="quality" placeholder="Ex: 720p (opcional)" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                    <select name="quality" id="quality" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                        <option value="">Melhor qualidade disponível</option>
+                        <option value="2160p">4K (2160p)</option>
+                        <option value="1440p">2K (1440p)</option>
+                        <option value="1080p">Full HD (1080p)</option>
+                        <option value="720p">HD (720p)</option>
+                        <option value="480p">SD (480p)</option>
+                        <option value="360p">360p</option>
+                        <option value="240p">240p</option>
+                    </select>
                 </div>
                 <div>
                     <label for="bitrate" class="block text-sm font-medium text-gray-400 mb-2">Bitrate (Áudio)</label>
-                    <input type="text" name="bitrate" id="bitrate" placeholder="Ex: 192k (opcional)" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                    <select name="bitrate" id="bitrate" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                        <option value="">Melhor qualidade disponível</option>
+                        <option value="320k">320 kbps (Máxima)</option>
+                        <option value="256k">256 kbps (Alta)</option>
+                        <option value="192k">192 kbps (Boa)</option>
+                        <option value="128k">128 kbps (Padrão)</option>
+                        <option value="96k">96 kbps (Baixa)</option>
+                        <option value="64k">64 kbps (Mínima)</option>
+                    </select>
                 </div>
                 <button type="submit" class="w-full py-3 px-4 rounded-lg text-white font-semibold bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800 flex items-center justify-center space-x-2 transition-all">
                     <i class="fa-solid fa-paper-plane"></i>
@@ -127,11 +144,28 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-400 mb-2">Qualidade (Vídeo)</label>
-                        <input type="text" name="quality" placeholder="Ex: 720p (opcional)" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                        <select name="quality" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                            <option value="">Melhor qualidade disponível</option>
+                            <option value="2160p">4K (2160p)</option>
+                            <option value="1440p">2K (1440p)</option>
+                            <option value="1080p">Full HD (1080p)</option>
+                            <option value="720p">HD (720p)</option>
+                            <option value="480p">SD (480p)</option>
+                            <option value="360p">360p</option>
+                            <option value="240p">240p</option>
+                        </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-400 mb-2">Bitrate (Áudio)</label>
-                        <input type="text" name="bitrate" placeholder="Ex: 192k (opcional)" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                        <select name="bitrate" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                            <option value="">Melhor qualidade disponível</option>
+                            <option value="320k">320 kbps (Máxima)</option>
+                            <option value="256k">256 kbps (Alta)</option>
+                            <option value="192k">192 kbps (Boa)</option>
+                            <option value="128k">128 kbps (Padrão)</option>
+                            <option value="96k">96 kbps (Baixa)</option>
+                            <option value="64k">64 kbps (Mínima)</option>
+                        </select>
                     </div>
                 </div>
                 <div class="mb-4">

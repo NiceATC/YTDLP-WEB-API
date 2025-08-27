@@ -73,18 +73,67 @@ def process_media(self, url, media_type, quality=None, bitrate=None):
         if 'playlist' in url.lower() or 'list=' in url:
             logger.info(f"Tarefa {self.request.id}: Detectada playlist, processando individualmente...")
             ydl_opts['noplaylist'] = False
-            ydl_opts['playlistend'] = 50  # Limit to 50 videos max
+            ydl_opts['playlistend'] = 50  # Máximo 50 vídeos
+            ydl_opts['extract_flat'] = False  # Força extração completa
         
         with YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=True)
             
-        # Handle playlist results
+        # Processa resultados de playlist
         if 'entries' in info_dict:
-            logger.info(f"Tarefa {self.request.id}: Playlist com {len(info_dict['entries'])} itens processada")
-            # For playlists, use the first entry as the main info
-            final_info = info_dict['entries'][0] if info_dict['entries'] else info_dict
+            entries = [entry for entry in info_dict['entries'] if entry is not None]
+            logger.info(f"Tarefa {self.request.id}: Playlist com {len(entries)} itens válidos processada")
+            
+            if not entries:
+                raise Exception("Nenhum vídeo válido encontrado na playlist")
+            
+            # Processa cada vídeo da playlist
+            results = []
+            for i, entry in enumerate(entries):
+                try:
+                    # Cria nome único para cada arquivo
+                    entry_filename = f"{uuid.uuid4()}{final_extension}"
+                    entry_output_path = os.path.join(Config.DOWNLOAD_FOLDER, entry_filename)
+                    
+                    # Encontra o arquivo processado para este vídeo
+                    entry_temp_path = None
+                    for f in os.listdir(Config.DOWNLOAD_FOLDER):
+                        if f.startswith(self.request.id) and not f.endswith('.json') and f not in [r['filename'] for r in results]:
+                            entry_temp_path = os.path.join(Config.DOWNLOAD_FOLDER, f)
+                            break
+                    
+                    if entry_temp_path and os.path.exists(entry_temp_path):
+                        os.rename(entry_temp_path, entry_output_path)
+                        
+                        # Salva no banco de dados
+                        file_size_mb = round(os.path.getsize(entry_output_path) / (1024 * 1024), 2)
+                        DatabaseService.save_media_file(entry_filename, entry, media_type, file_size_mb)
+                        
+                        results.append({
+                            'filename': entry_filename,
+                            'title': entry.get('title', f'Vídeo {i+1}'),
+                            'download_url': f"{Config.BASE_URL}/api/download/{entry_filename}"
+                        })
+                        
+                        logger.info(f"Tarefa {self.request.id}: Vídeo {i+1}/{len(entries)} processado: {entry.get('title', 'N/A')}")
+                    
+                except Exception as e:
+                    logger.error(f"Tarefa {self.request.id}: Erro ao processar vídeo {i+1}: {e}")
+                    continue
+            
+            if not results:
+                raise Exception("Nenhum vídeo da playlist pôde ser processado")
+            
+            # Retorna informações do primeiro vídeo como principal, mas inclui todos os resultados
+            final_info = entries[0]
+            playlist_info = {
+                'playlist_title': info_dict.get('title', 'Playlist'),
+                'playlist_count': len(results),
+                'videos': results
+            }
         else:
             final_info = info_dict
+            playlist_info = None
 
         logger.info(f"Tarefa {self.request.id}: Processamento do yt-dlp concluido.")
 
@@ -128,7 +177,7 @@ def process_media(self, url, media_type, quality=None, bitrate=None):
                 logger.warning(f"Tarefa {self.request.id}: Formato de data inválido '{upload_date_str}'")
                 formatted_date = upload_date_str
 
-        return {
+        result = {
             'download_url': download_url,
             'title': final_info.get('title', 'N/A'),
             'uploader': final_info.get('uploader', 'N/A'),
@@ -141,6 +190,13 @@ def process_media(self, url, media_type, quality=None, bitrate=None):
             'upload_date': formatted_date,
             'time_spend': f"{processing_time}s",
         }
+        
+        # Adiciona informações de playlist se aplicável
+        if playlist_info:
+            result['playlist'] = playlist_info
+            result['title'] = f"{playlist_info['playlist_title']} ({playlist_info['playlist_count']} vídeos)"
+        
+        return result
     except Exception as e:
         logger.error(f"Erro na tarefa {self.request.id}: {e}", exc_info=True)
         raise
