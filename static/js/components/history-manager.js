@@ -67,19 +67,8 @@ class HistoryManager {
                     const result = await response.json();
                     if (result.success) {
                         this.dashboard.showNotification('Histórico limpo com sucesso!', 'success');
-                        // Remove all history rows
-                        const tbody = document.querySelector('#history tbody');
-                        if (tbody) {
-                            tbody.innerHTML = `
-                                <tr>
-                                    <td colspan="4" class="text-center py-8 text-gray-500">
-                                        <i class="fas fa-inbox text-4xl mb-4 block"></i>
-                                        Nenhum histórico encontrado.
-                                    </td>
-                                </tr>
-                            `;
-                        }
-                        this.updateHistoryStats();
+                        // Reload the page to refresh all data including charts
+                        setTimeout(() => location.reload(), 1000);
                     } else {
                         this.dashboard.showNotification('Erro ao limpar histórico', 'error');
                     }

@@ -334,3 +334,57 @@ def batch_download():
     except Exception as e:
         logging.error(f"Erro ao criar download em lote: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@admin_bp.route('/tasks/<task_id>/status', methods=['GET'])
+@login_required
+def get_task_status_admin(task_id):
+    """Retorna status detalhado de uma tarefa para o admin"""
+    try:
+        from celery.result import AsyncResult
+        from tasks import celery
+        
+        task_result = AsyncResult(task_id, app=celery)
+        
+        if task_result.state == 'PENDING':
+            response = {
+                'state': 'PENDING',
+                'message': 'Tarefa aguardando processamento...',
+                'progress': 0
+            }
+        elif task_result.state == 'PROGRESS':
+            response = {
+                'state': 'PROGRESS',
+                'progress': task_result.info.get('progress', 0),
+                'message': task_result.info.get('message', 'Processando...'),
+                'stage': task_result.info.get('stage', 'unknown'),
+                **task_result.info
+            }
+        elif task_result.state == 'SUCCESS':
+            response = {
+                'state': 'SUCCESS',
+                'message': 'Tarefa concluída com sucesso!',
+                'progress': 100,
+                'result': task_result.result
+            }
+        elif task_result.state == 'FAILURE':
+            response = {
+                'state': 'FAILURE',
+                'message': f'Tarefa falhou: {str(task_result.info)}',
+                'progress': 0,
+                'error': str(task_result.info)
+            }
+        else:
+            response = {
+                'state': task_result.state,
+                'message': f'Estado: {task_result.state}',
+                'progress': 0
+            }
+        
+        return jsonify(response)
+    except Exception as e:
+        logging.error(f"Erro ao obter status da tarefa {task_id}: {e}")
+        return jsonify({
+            'state': 'ERROR',
+            'message': f'Erro ao obter status: {str(e)}',
+            'progress': 0
+        }), 500

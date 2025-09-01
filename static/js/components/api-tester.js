@@ -55,7 +55,14 @@ class ApiTester {
                     } else {
                         addLog(`URL para Download: <a href="${result.result.download_url}" class="text-cyan-400 hover:underline" target="_blank">${result.result.download_url}</a>`);
                     }
+                } else if (result.status === 'processing' && result.task_id) {
+                    addLog(`Tarefa em processamento. ID: ${result.task_id}`, 'info');
                     
+                    // Start progress tracking
+                    this.dashboard.progressTracker.startTracking(result.task_id, 'download');
+                    
+                    // Also poll for completion in the log
+                    this.pollTaskStatus(result.task_id, addLog);
                 }
             } catch (error) {
                 addLog(`Erro na requisição inicial: ${error.message}`, 'error');

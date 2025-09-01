@@ -29,8 +29,10 @@ def ensure_cookies_available():
 @celery.task(bind=True)
 def process_media(self, url, media_type, quality=None, bitrate=None):
     start_time = time.time()
+    task_id = self.request.id
+    
     try:
-        logger.info(f"Iniciando tarefa {self.request.id}: tipo={media_type}, url='{url}'")
+        logger.info(f"[{task_id}] Iniciando download: tipo={media_type}, url='{url}'")
         
         if not os.path.exists(Config.DOWNLOAD_FOLDER):
             os.makedirs(Config.DOWNLOAD_FOLDER)
@@ -49,260 +51,510 @@ def process_media(self, url, media_type, quality=None, bitrate=None):
         cookies_path = ensure_cookies_available()
         if cookies_path and os.path.exists(cookies_path):
             ydl_opts['cookiefile'] = cookies_path
-            logger.info(f"Tarefa {self.request.id}: Usando arquivo de cookies: {cookies_path}")
+            logger.info(f"[{task_id}] Usando arquivo de cookies")
 
         # Verifica se é playlist
         is_playlist = 'playlist' in url.lower() or 'list=' in url
         
         if is_playlist:
-            logger.info(f"Tarefa {self.request.id}: Detectada playlist, processando...")
-            ydl_opts['noplaylist'] = False
-            ydl_opts['playlistend'] = 50
-            
-            # Primeiro, extrai informações da playlist
-            with YoutubeDL({'extract_flat': True, 'quiet': True}) as ydl:
-                playlist_info = ydl.extract_info(url, download=False)
-            
-            if 'entries' in playlist_info:
-                entries = [entry for entry in playlist_info['entries'] if entry is not None]
-                logger.info(f"Tarefa {self.request.id}: Playlist com {len(entries)} vídeos encontrada")
-                
-                results = []
-                total_videos = len(entries)
-                
-                for i, entry in enumerate(entries):
-                    try:
-                        # Atualiza progresso
-                        progress = int((i / total_videos) * 100)
-                        self.update_state(
-                            state='PROGRESS',
-                            meta={
-                                'current': i + 1,
-                                'total': total_videos,
-                                'progress': progress,
-                                'status': f'Processando vídeo {i + 1}/{total_videos}: {entry.get("title", "N/A")}'
-                            }
-                        )
-                        
-                        video_url = entry.get('url') or f"https://www.youtube.com/watch?v={entry.get('id')}"
-                        logger.info(f"Tarefa {self.request.id}: Processando vídeo {i+1}/{total_videos}: {video_url}")
-                        
-                        # Configurações específicas para este vídeo
-                        video_opts = ydl_opts.copy()
-                        video_opts['noplaylist'] = True
-                        
-                        # Nome único para cada arquivo
-                        video_filename = f"{uuid.uuid4()}"
-                        video_opts['outtmpl'] = os.path.join(Config.DOWNLOAD_FOLDER, f"{video_filename}.%(ext)s")
-                        
-                        if is_audio:
-                            video_opts['format'] = 'bestaudio/best'
-                            video_opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': bitrate or '192'}]
-                            final_extension = '.mp3'
-                        else:
-                            quality_filter = f"[height<={quality.replace('p', '')}]" if quality else ""
-                            video_opts['format'] = f'bestvideo{quality_filter}+bestaudio/best'
-                            video_opts['postprocessors'] = [{'key': 'FFmpegVideoConvertor', 'preferedformat': 'mp4'}]
-                            final_extension = '.mp4'
-                        
-                        # Download do vídeo individual
-                        with YoutubeDL(video_opts) as ydl:
-                            video_info = ydl.extract_info(video_url, download=True)
-                        
-                        # Encontra o arquivo baixado
-                        final_filename = f"{uuid.uuid4()}{final_extension}"
-                        final_path = os.path.join(Config.DOWNLOAD_FOLDER, final_filename)
-                        
-                        # Procura pelo arquivo processado
-                        found_file = None
-                        for f in os.listdir(Config.DOWNLOAD_FOLDER):
-                            if f.startswith(video_filename) and not f.endswith('.json'):
-                                found_file = os.path.join(Config.DOWNLOAD_FOLDER, f)
-                                break
-                        
-                        if found_file and os.path.exists(found_file):
-                            os.rename(found_file, final_path)
-                            
-                            # Salva no banco de dados
-                            file_size_mb = round(os.path.getsize(final_path) / (1024 * 1024), 2)
-                            DatabaseService.save_media_file(final_filename, video_info, media_type, file_size_mb)
-                            
-                            results.append({
-                                'filename': final_filename,
-                                'title': video_info.get('title', f'Vídeo {i+1}'),
-                                'download_url': f"{Config.BASE_URL}/api/download/{final_filename}"
-                            })
-                            
-                            logger.info(f"Tarefa {self.request.id}: Vídeo {i+1}/{total_videos} processado com sucesso")
-                        else:
-                            logger.warning(f"Tarefa {self.request.id}: Arquivo não encontrado para vídeo {i+1}")
-                            
-                    except Exception as e:
-                        logger.error(f"Tarefa {self.request.id}: Erro ao processar vídeo {i+1}: {e}")
-                        continue
-                
-                if not results:
-                    raise Exception("Nenhum vídeo da playlist pôde ser processado")
-                
-                processing_time = round(time.time() - start_time)
-                
-                return {
-                    'playlist': True,
-                    'playlist_title': playlist_info.get('title', 'Playlist'),
-                    'playlist_count': len(results),
-                    'videos': results,
-                    'time_spend': f"{processing_time}s",
-                    'download_url': results[0]['download_url'] if results else None,
-                    'title': f"{playlist_info.get('title', 'Playlist')} ({len(results)} vídeos)",
-                    'uploader': playlist_info.get('uploader', 'N/A'),
-                    'thumbnail': playlist_info.get('thumbnail', None),
-                    'duration_string': f"{len(results)} vídeos",
-                    'webpage_url': url,
-                    'view_count': None,
-                    'like_count': None,
-                    'description': f"Playlist com {len(results)} vídeos baixados",
-                    'upload_date': 'N/A'
-                }
-        
-        # Processamento de vídeo único
-        temp_base_path = os.path.join(Config.DOWNLOAD_FOLDER, self.request.id)
-        ydl_opts['outtmpl'] = f"{temp_base_path}.%(ext)s"
-
-        if is_audio:
-            ydl_opts['format'] = 'bestaudio/best'
-            ydl_opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': bitrate or '192'}]
-            final_extension = '.mp3'
+            return process_playlist(self, url, media_type, quality, bitrate, ydl_opts)
         else:
-            quality_filter = f"[height<={quality.replace('p', '')}]" if quality else ""
-            ydl_opts['format'] = f'bestvideo{quality_filter}+bestaudio/best'
-            ydl_opts['postprocessors'] = [{'key': 'FFmpegVideoConvertor', 'preferedformat': 'mp4'}]
-            final_extension = '.mp4'
-
-        with YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=True)
-
-        processed_filepath = f"{temp_base_path}{final_extension}"
-        output_filename = f"{uuid.uuid4()}{final_extension}"
-        output_path = os.path.join(Config.DOWNLOAD_FOLDER, output_filename)
-
-        if os.path.exists(processed_filepath):
-            os.rename(processed_filepath, output_path)
-        else:
-            found = False
-            for f in os.listdir(Config.DOWNLOAD_FOLDER):
-                if f.startswith(self.request.id) and not f.endswith('.json'):
-                    os.rename(os.path.join(Config.DOWNLOAD_FOLDER, f), output_path)
-                    found = True
-                    break
-            if not found:
-                raise FileNotFoundError(f"O ficheiro processado '{processed_filepath}' não foi encontrado após o download.")
-
-        file_size_mb = round(os.path.getsize(output_path) / (1024 * 1024), 2)
-        DatabaseService.save_media_file(output_filename, info_dict, media_type, file_size_mb)
-
-        processing_time = round(time.time() - start_time)
-        
-        upload_date_str = info_dict.get('upload_date')
-        formatted_date = 'N/A'
-        if upload_date_str:
-            try:
-                formatted_date = datetime.strptime(upload_date_str, '%Y%m%d').strftime('%d/%m/%Y')
-            except ValueError:
-                formatted_date = upload_date_str
-
-        return {
-            'playlist': False,
-            'download_url': f"{Config.BASE_URL}/api/download/{output_filename}",
-            'title': info_dict.get('title', 'N/A'),
-            'uploader': info_dict.get('uploader', 'N/A'),
-            'thumbnail': info_dict.get('thumbnail', None),
-            'duration_string': info_dict.get('duration_string', 'N/A'),
-            'webpage_url': info_dict.get('webpage_url', '#'),
-            'view_count': info_dict.get('view_count'),
-            'like_count': info_dict.get('like_count'),
-            'description': info_dict.get('description'),
-            'upload_date': formatted_date,
-            'time_spend': f"{processing_time}s",
-        }
+            return process_single_video(self, url, media_type, quality, bitrate, ydl_opts)
         
     except Exception as e:
-        logger.error(f"Erro na tarefa {self.request.id}: {e}", exc_info=True)
+        logger.error(f"[{task_id}] Erro na tarefa: {e}", exc_info=True)
         raise
 
+def process_playlist(task_self, url, media_type, quality, bitrate, base_opts):
+    task_id = task_self.request.id
+    start_time = time.time()
+    
+    logger.info(f"[{task_id}] Processando playlist: {url}")
+    
+    # Atualiza status inicial
+    task_self.update_state(
+        state='PROGRESS',
+        meta={
+            'stage': 'extracting',
+            'message': 'Extraindo informações da playlist...',
+            'progress': 5
+        }
+    )
+    
+    # Extrai informações da playlist
+    extract_opts = base_opts.copy()
+    extract_opts.update({
+        'extract_flat': True,
+        'noplaylist': False,
+        'playlistend': 50
+    })
+    
+    with YoutubeDL(extract_opts) as ydl:
+        playlist_info = ydl.extract_info(url, download=False)
+    
+    if 'entries' not in playlist_info:
+        raise Exception("Playlist não encontrada ou vazia")
+    
+    entries = [entry for entry in playlist_info['entries'] if entry is not None]
+    total_videos = len(entries)
+    
+    logger.info(f"[{task_id}] Playlist com {total_videos} vídeos encontrada")
+    
+    # Atualiza status
+    task_self.update_state(
+        state='PROGRESS',
+        meta={
+            'stage': 'downloading',
+            'message': f'Baixando {total_videos} vídeos...',
+            'progress': 10,
+            'total_videos': total_videos,
+            'completed_videos': 0,
+            'failed_videos': 0
+        }
+    )
+    
+    results = []
+    completed = 0
+    failed = 0
+    
+    for i, entry in enumerate(entries):
+        try:
+            # Calcula progresso (10% para extração + 90% para downloads)
+            download_progress = int(10 + (i / total_videos) * 90)
+            
+            video_title = entry.get('title', f'Vídeo {i+1}')
+            logger.info(f"[{task_id}] Processando vídeo {i+1}/{total_videos}: {video_title}")
+            
+            # Atualiza status
+            task_self.update_state(
+                state='PROGRESS',
+                meta={
+                    'stage': 'downloading',
+                    'message': f'Baixando: {video_title}',
+                    'progress': download_progress,
+                    'total_videos': total_videos,
+                    'completed_videos': completed,
+                    'failed_videos': failed,
+                    'current_video': i + 1,
+                    'current_title': video_title
+                }
+            )
+            
+            # URL do vídeo individual
+            video_url = entry.get('url') or f"https://www.youtube.com/watch?v={entry.get('id')}"
+            
+            # Nome único para cada arquivo
+            unique_filename = f"playlist_{task_id}_{i}_{uuid.uuid4().hex[:8]}"
+            
+            # Configurações para este vídeo específico
+            video_opts = base_opts.copy()
+            video_opts.update({
+                'noplaylist': True,
+                'outtmpl': os.path.join(Config.DOWNLOAD_FOLDER, f"{unique_filename}.%(ext)s")
+            })
+            
+            if media_type == 'audio':
+                video_opts['format'] = 'bestaudio/best'
+                video_opts['postprocessors'] = [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': bitrate or '192'
+                }]
+                expected_extension = '.mp3'
+            else:
+                quality_filter = f"[height<={quality.replace('p', '')}]" if quality else ""
+                video_opts['format'] = f'bestvideo{quality_filter}+bestaudio/best'
+                video_opts['postprocessors'] = [{
+                    'key': 'FFmpegVideoConvertor',
+                    'preferedformat': 'mp4'
+                }]
+                expected_extension = '.mp4'
+            
+            # Download do vídeo
+            with YoutubeDL(video_opts) as ydl:
+                video_info = ydl.extract_info(video_url, download=True)
+            
+            # Encontra e renomeia o arquivo baixado
+            final_filename = f"{uuid.uuid4().hex}{expected_extension}"
+            final_path = os.path.join(Config.DOWNLOAD_FOLDER, final_filename)
+            
+            # Procura pelo arquivo processado
+            found_file = None
+            for filename in os.listdir(Config.DOWNLOAD_FOLDER):
+                if filename.startswith(unique_filename) and not filename.endswith('.json'):
+                    found_file = os.path.join(Config.DOWNLOAD_FOLDER, filename)
+                    break
+            
+            if found_file and os.path.exists(found_file):
+                # Renomeia para nome final
+                os.rename(found_file, final_path)
+                
+                # Salva no banco de dados
+                file_size_mb = round(os.path.getsize(final_path) / (1024 * 1024), 2)
+                DatabaseService.save_media_file(final_filename, video_info, media_type, file_size_mb)
+                
+                results.append({
+                    'filename': final_filename,
+                    'title': video_info.get('title', video_title),
+                    'download_url': f"{Config.BASE_URL}/api/download/{final_filename}",
+                    'duration': video_info.get('duration_string', 'N/A'),
+                    'uploader': video_info.get('uploader', 'N/A')
+                })
+                
+                completed += 1
+                logger.info(f"[{task_id}] Vídeo {i+1}/{total_videos} concluído: {final_filename}")
+            else:
+                failed += 1
+                logger.warning(f"[{task_id}] Arquivo não encontrado para vídeo {i+1}: {video_title}")
+                
+        except Exception as e:
+            failed += 1
+            logger.error(f"[{task_id}] Erro ao processar vídeo {i+1}: {e}")
+            continue
+    
+    if not results:
+        raise Exception("Nenhum vídeo da playlist pôde ser processado")
+    
+    processing_time = round(time.time() - start_time)
+    
+    # Status final
+    task_self.update_state(
+        state='SUCCESS',
+        meta={
+            'stage': 'completed',
+            'message': f'Playlist concluída: {completed} sucessos, {failed} falhas',
+            'progress': 100,
+            'total_videos': total_videos,
+            'completed_videos': completed,
+            'failed_videos': failed
+        }
+    )
+    
+    return {
+        'playlist': True,
+        'playlist_title': playlist_info.get('title', 'Playlist'),
+        'playlist_count': len(results),
+        'videos': results,
+        'time_spend': f"{processing_time}s",
+        'download_url': results[0]['download_url'] if results else None,
+        'title': f"{playlist_info.get('title', 'Playlist')} ({len(results)} vídeos)",
+        'uploader': playlist_info.get('uploader', 'N/A'),
+        'thumbnail': playlist_info.get('thumbnail', None),
+        'duration_string': f"{len(results)} vídeos",
+        'webpage_url': url,
+        'view_count': None,
+        'like_count': None,
+        'description': f"Playlist com {len(results)} vídeos baixados com sucesso",
+        'upload_date': 'N/A'
+    }
+
+def process_single_video(task_self, url, media_type, quality, bitrate, base_opts):
+    task_id = task_self.request.id
+    start_time = time.time()
+    
+    logger.info(f"[{task_id}] Processando vídeo único: {url}")
+    
+    # Atualiza status inicial
+    task_self.update_state(
+        state='PROGRESS',
+        meta={
+            'stage': 'extracting',
+            'message': 'Extraindo informações do vídeo...',
+            'progress': 10
+        }
+    )
+    
+    # Nome único para o arquivo
+    unique_filename = f"single_{task_id}_{uuid.uuid4().hex[:8]}"
+    
+    video_opts = base_opts.copy()
+    video_opts['outtmpl'] = os.path.join(Config.DOWNLOAD_FOLDER, f"{unique_filename}.%(ext)s")
+
+    if media_type == 'audio':
+        video_opts['format'] = 'bestaudio/best'
+        video_opts['postprocessors'] = [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': bitrate or '192'
+        }]
+        expected_extension = '.mp3'
+    else:
+        quality_filter = f"[height<={quality.replace('p', '')}]" if quality else ""
+        video_opts['format'] = f'bestvideo{quality_filter}+bestaudio/best'
+        video_opts['postprocessors'] = [{
+            'key': 'FFmpegVideoConvertor',
+            'preferedformat': 'mp4'
+        }]
+        expected_extension = '.mp4'
+
+    # Atualiza status
+    task_self.update_state(
+        state='PROGRESS',
+        meta={
+            'stage': 'downloading',
+            'message': 'Baixando vídeo...',
+            'progress': 50
+        }
+    )
+
+    with YoutubeDL(video_opts) as ydl:
+        info_dict = ydl.extract_info(url, download=True)
+
+    # Atualiza status
+    task_self.update_state(
+        state='PROGRESS',
+        meta={
+            'stage': 'processing',
+            'message': 'Processando arquivo...',
+            'progress': 80
+        }
+    )
+
+    # Encontra e renomeia o arquivo baixado
+    final_filename = f"{uuid.uuid4().hex}{expected_extension}"
+    final_path = os.path.join(Config.DOWNLOAD_FOLDER, final_filename)
+    
+    # Procura pelo arquivo processado
+    found_file = None
+    for filename in os.listdir(Config.DOWNLOAD_FOLDER):
+        if filename.startswith(unique_filename) and not filename.endswith('.json'):
+            found_file = os.path.join(Config.DOWNLOAD_FOLDER, filename)
+            break
+    
+    if found_file and os.path.exists(found_file):
+        os.rename(found_file, final_path)
+    else:
+        raise FileNotFoundError(f"Arquivo processado não encontrado: {unique_filename}")
+
+    file_size_mb = round(os.path.getsize(final_path) / (1024 * 1024), 2)
+    DatabaseService.save_media_file(final_filename, info_dict, media_type, file_size_mb)
+
+    processing_time = round(time.time() - start_time)
+    
+    upload_date_str = info_dict.get('upload_date')
+    formatted_date = 'N/A'
+    if upload_date_str:
+        try:
+            formatted_date = datetime.strptime(upload_date_str, '%Y%m%d').strftime('%d/%m/%Y')
+        except ValueError:
+            formatted_date = upload_date_str
+
+    # Status final
+    task_self.update_state(
+        state='SUCCESS',
+        meta={
+            'stage': 'completed',
+            'message': 'Download concluído com sucesso!',
+            'progress': 100
+        }
+    )
+
+    return {
+        'playlist': False,
+        'download_url': f"{Config.BASE_URL}/api/download/{final_filename}",
+        'title': info_dict.get('title', 'N/A'),
+        'uploader': info_dict.get('uploader', 'N/A'),
+        'thumbnail': info_dict.get('thumbnail', None),
+        'duration_string': info_dict.get('duration_string', 'N/A'),
+        'webpage_url': info_dict.get('webpage_url', '#'),
+        'view_count': info_dict.get('view_count'),
+        'like_count': info_dict.get('like_count'),
+        'description': info_dict.get('description'),
+        'upload_date': formatted_date,
+        'time_spend': f"{processing_time}s",
+    }
+
 @celery.task(bind=True)
-def process_batch_download(self, batch_id, urls, media_type, quality=None, bitrate=None, folder_id=None):
-    """Processa download em lote"""
+def process_batch_download(self, urls, media_type, quality=None, bitrate=None, folder_id=None):
+    """Processa download em lote de múltiplas URLs"""
+    task_id = self.request.id
+    start_time = time.time()
+    
     try:
-        logger.info(f"Iniciando batch download {batch_id} com {len(urls)} URLs")
+        logger.info(f"[{task_id}] Iniciando batch download com {len(urls)} URLs")
         
         total_urls = len(urls)
         completed = 0
         failed = 0
         results = []
         
+        # Status inicial
+        self.update_state(
+            state='PROGRESS',
+            meta={
+                'stage': 'batch_processing',
+                'message': f'Iniciando download de {total_urls} URLs...',
+                'progress': 0,
+                'total_urls': total_urls,
+                'completed': 0,
+                'failed': 0,
+                'current_url': '',
+                'results': []
+            }
+        )
+        
         for i, url in enumerate(urls):
             try:
-                # Atualiza progresso
+                # Progresso baseado no índice atual
                 progress = int((i / total_urls) * 100)
+                
+                logger.info(f"[{task_id}] Processando URL {i+1}/{total_urls}: {url}")
+                
+                # Atualiza status
                 self.update_state(
                     state='PROGRESS',
                     meta={
-                        'current': i + 1,
-                        'total': total_urls,
+                        'stage': 'batch_processing',
+                        'message': f'Processando URL {i+1}/{total_urls}',
                         'progress': progress,
+                        'total_urls': total_urls,
                         'completed': completed,
                         'failed': failed,
-                        'status': f'Processando URL {i + 1}/{total_urls}'
+                        'current_url': url,
+                        'current_index': i + 1,
+                        'results': results
                     }
                 )
                 
-                # Processa cada URL individualmente
-                task = process_media.delay(url, media_type, quality, bitrate)
-                result = task.get(timeout=300)  # 5 minutos timeout por vídeo
+                # Processa URL individual usando a função existente
+                single_result = process_single_video_for_batch(url, media_type, quality, bitrate, task_id, i)
                 
-                if result:
+                if single_result:
                     completed += 1
                     results.append({
                         'url': url,
                         'status': 'success',
-                        'result': result
+                        'filename': single_result['filename'],
+                        'title': single_result['title'],
+                        'download_url': single_result['download_url']
                     })
                     
-                    # Se especificou pasta, move o arquivo
-                    if folder_id and result.get('filename'):
-                        DatabaseService.move_file_to_folder_by_filename(result['filename'], folder_id)
+                    # Move para pasta se especificado
+                    if folder_id:
+                        DatabaseService.move_file_to_folder_by_filename(single_result['filename'], folder_id)
+                        
+                    logger.info(f"[{task_id}] URL {i+1} concluída com sucesso")
                 else:
                     failed += 1
                     results.append({
                         'url': url,
                         'status': 'failed',
-                        'error': 'Resultado vazio'
+                        'error': 'Falha no processamento'
                     })
+                    logger.warning(f"[{task_id}] URL {i+1} falhou")
                 
             except Exception as e:
                 failed += 1
-                logger.error(f"Erro ao processar URL {url}: {e}")
+                error_msg = str(e)
+                logger.error(f"[{task_id}] Erro na URL {i+1} ({url}): {error_msg}")
                 results.append({
                     'url': url,
                     'status': 'failed',
-                    'error': str(e)
+                    'error': error_msg
                 })
-            
-            # Atualiza progresso no banco
-            DatabaseService.update_batch_progress(batch_id, completed, failed)
         
-        # Finaliza batch
-        DatabaseService.complete_batch_download(batch_id)
+        processing_time = round(time.time() - start_time)
+        
+        # Status final
+        self.update_state(
+            state='SUCCESS',
+            meta={
+                'stage': 'completed',
+                'message': f'Batch concluído: {completed} sucessos, {failed} falhas',
+                'progress': 100,
+                'total_urls': total_urls,
+                'completed': completed,
+                'failed': failed,
+                'results': results
+            }
+        )
         
         return {
-            'batch_id': batch_id,
-            'total': total_urls,
+            'batch': True,
+            'total_urls': total_urls,
             'completed': completed,
             'failed': failed,
-            'results': results
+            'results': results,
+            'time_spend': f"{processing_time}s",
+            'success_rate': round((completed / total_urls) * 100, 1) if total_urls > 0 else 0
         }
         
     except Exception as e:
-        logger.error(f"Erro no batch download {batch_id}: {e}")
-        DatabaseService.fail_batch_download(batch_id, str(e))
+        logger.error(f"[{task_id}] Erro no batch download: {e}")
         raise
+
+def process_single_video_for_batch(url, media_type, quality, bitrate, batch_task_id, index):
+    """Processa um vídeo individual para batch download"""
+    try:
+        if not os.path.exists(Config.DOWNLOAD_FOLDER):
+            os.makedirs(Config.DOWNLOAD_FOLDER)
+
+        # Nome único para evitar conflitos
+        unique_filename = f"batch_{batch_task_id}_{index}_{uuid.uuid4().hex[:8]}"
+        
+        # Configurações do yt-dlp
+        ydl_opts = {
+            'noplaylist': True,
+            'quiet': True,
+            'writeinfojson': False,
+            'extract_flat': False,
+            'ignoreerrors': True,
+            'outtmpl': os.path.join(Config.DOWNLOAD_FOLDER, f"{unique_filename}.%(ext)s")
+        }
+        
+        # Adiciona cookies se disponível
+        cookies_path = ensure_cookies_available()
+        if cookies_path and os.path.exists(cookies_path):
+            ydl_opts['cookiefile'] = cookies_path
+
+        if media_type == 'audio':
+            ydl_opts['format'] = 'bestaudio/best'
+            ydl_opts['postprocessors'] = [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': bitrate or '192'
+            }]
+            expected_extension = '.mp3'
+        else:
+            quality_filter = f"[height<={quality.replace('p', '')}]" if quality else ""
+            ydl_opts['format'] = f'bestvideo{quality_filter}+bestaudio/best'
+            ydl_opts['postprocessors'] = [{
+                'key': 'FFmpegVideoConvertor',
+                'preferedformat': 'mp4'
+            }]
+            expected_extension = '.mp4'
+
+        # Download
+        with YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(url, download=True)
+
+        # Encontra arquivo baixado
+        found_file = None
+        for filename in os.listdir(Config.DOWNLOAD_FOLDER):
+            if filename.startswith(unique_filename) and not filename.endswith('.json'):
+                found_file = os.path.join(Config.DOWNLOAD_FOLDER, filename)
+                break
+
+        if not found_file or not os.path.exists(found_file):
+            raise FileNotFoundError(f"Arquivo não encontrado após download: {unique_filename}")
+
+        # Nome final único
+        final_filename = f"{uuid.uuid4().hex}{expected_extension}"
+        final_path = os.path.join(Config.DOWNLOAD_FOLDER, final_filename)
+        
+        # Renomeia para nome final
+        os.rename(found_file, final_path)
+        
+        # Salva no banco
+        file_size_mb = round(os.path.getsize(final_path) / (1024 * 1024), 2)
+        DatabaseService.save_media_file(final_filename, info_dict, media_type, file_size_mb)
+        
+        return {
+            'filename': final_filename,
+            'title': info_dict.get('title', 'N/A'),
+            'download_url': f"{Config.BASE_URL}/api/download/{final_filename}"
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao processar vídeo individual para batch: {e}")
+        return None

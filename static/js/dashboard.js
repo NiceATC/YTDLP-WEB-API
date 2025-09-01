@@ -12,6 +12,7 @@ class Dashboard {
         
         // Initialize component managers
         this.modalManager = new ModalManager();
+        this.progressTracker = new ProgressTracker(this);
         this.fileManager = new FileManager(this);
         this.folderManager = new FolderManager(this);
         this.batchManager = new BatchManager(this);
