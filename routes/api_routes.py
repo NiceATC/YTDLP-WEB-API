@@ -80,6 +80,19 @@ def download_media():
     FileService.ensure_cookies_available()
     
     task = process_media.delay(data.url, data.type, data.quality, data.bitrate)
+    
+    # Para playlists e batch, retorna imediatamente o link de acompanhamento
+    is_playlist = 'playlist' in data.url.lower() or 'list=' in data.url
+    if is_playlist:
+        response_data = {
+            "status": "processing", 
+            "task_id": task.id, 
+            "check_status_url": f"{Config.BASE_URL}/api/tasks/{task.id}",
+            "type": "playlist"
+        }
+        DatabaseService.log_request(api_key, request.args.to_dict(), response_data, "processing")
+        return jsonify(response_data), 202
+    
     timeout = Config.get_settings().get("TASK_COMPLETION_TIMEOUT", 60)
 
     try:
@@ -93,25 +106,33 @@ def download_media():
         elif download_url and download_url.startswith('http://'):
             download_url = download_url.replace('http://', 'https://', 1)
 
-        response_data = {
-            "status": {
-                "task": "completed",
+        if result.get('playlist'):
+            response_data = {
+                "status": "completed",
                 "task_id": task.id,
-                "time_spend": result.get('time_spend', 'N/A'),
-                "download_url": download_url,
-            },
-            "metadata": {
-                "description": result.get('description'),
-                "duration_string": result.get('duration_string'),
-                "like_count": result.get('like_count'),
-                "thumbnail": result.get('thumbnail'),
-                "title": result.get('title'),
-                "upload_date": result.get('upload_date'),
-                "uploader": result.get('uploader'),
-                "view_count": result.get('view_count'),
-                "youtube_url": result.get('webpage_url')
+                "type": "playlist",
+                "result": result
             }
-        }
+        else:
+            response_data = {
+                "status": {
+                    "task": "completed",
+                    "task_id": task.id,
+                    "time_spend": result.get('time_spend', 'N/A'),
+                    "download_url": download_url,
+                },
+                "metadata": {
+                    "description": result.get('description'),
+                    "duration_string": result.get('duration_string'),
+                    "like_count": result.get('like_count'),
+                    "thumbnail": result.get('thumbnail'),
+                    "title": result.get('title'),
+                    "upload_date": result.get('upload_date'),
+                    "uploader": result.get('uploader'),
+                    "view_count": result.get('view_count'),
+                    "youtube_url": result.get('webpage_url')
+                }
+            }
         
         DatabaseService.log_request(api_key, request.args.to_dict(), response_data, "completed")
         return jsonify(response_data), 200
@@ -136,6 +157,15 @@ def get_task_status(task_id):
     task_result = AsyncResult(task_id, app=celery)
     if task_result.state == 'PENDING': 
         response = {'status': 'pending', 'message': 'A tarefa ainda não foi iniciada.'}
+    elif task_result.state == 'PROGRESS':
+        response = {
+            'status': 'processing',
+            'progress': task_result.info.get('progress', 0),
+            'message': task_result.info.get('message', 'Processando...'),
+            'stage': task_result.info.get('stage', 'unknown'),
+            'type': task_result.info.get('type', 'single'),
+            **task_result.info
+        }
     elif task_result.state == 'SUCCESS': 
         result = task_result.result
         download_url = result.get('download_url')
@@ -144,25 +174,33 @@ def get_task_status(task_id):
         elif download_url and download_url.startswith('http://'):
             download_url = download_url.replace('http://', 'https://', 1)
         
-        response = {
-            "status": {
-                "task": "completed",
+        if result.get('playlist') or result.get('batch'):
+            response = {
+                "status": "completed",
                 "task_id": task_id,
-                "time_spend": result.get('time_spend', 'N/A'),
-                "download_url": download_url,
-            },
-            "metadata": {
-                "description": result.get('description'),
-                "duration_string": result.get('duration_string'),
-                "like_count": result.get('like_count'),
-                "thumbnail": result.get('thumbnail'),
-                "title": result.get('title'),
-                "upload_date": result.get('upload_date'),
-                "uploader": result.get('uploader'),
-                "view_count": result.get('view_count'),
-                "youtube_url": result.get('webpage_url')
+                "type": "playlist" if result.get('playlist') else "batch",
+                "result": result
             }
-        }
+        else:
+            response = {
+                "status": {
+                    "task": "completed",
+                    "task_id": task_id,
+                    "time_spend": result.get('time_spend', 'N/A'),
+                    "download_url": download_url,
+                },
+                "metadata": {
+                    "description": result.get('description'),
+                    "duration_string": result.get('duration_string'),
+                    "like_count": result.get('like_count'),
+                    "thumbnail": result.get('thumbnail'),
+                    "title": result.get('title'),
+                    "upload_date": result.get('upload_date'),
+                    "uploader": result.get('uploader'),
+                    "view_count": result.get('view_count'),
+                    "youtube_url": result.get('webpage_url')
+                }
+            }
     elif task_result.state == 'FAILURE': 
         response = {'status': 'failed', 'message': str(task_result.info)}
     else: 

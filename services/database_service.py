@@ -140,6 +140,15 @@ class DatabaseService:
     def log_request(api_key: str, request_data: Dict, response_data: Dict, status: str) -> None:
         """Registra uma requisição no histórico"""
         with DatabaseService.get_session() as db:
+            # Determina o status correto baseado no tipo de resposta
+            if isinstance(response_data, dict):
+                if response_data.get('status') == 'processing':
+                    status = 'processing'
+                elif response_data.get('status') == 'completed':
+                    status = 'completed'
+                elif response_data.get('status', {}).get('task') == 'completed':
+                    status = 'completed'
+            
             history = RequestHistory(
                 api_key_used=f"{api_key[:4]}...{api_key[-4:]}",
                 request_data=request_data,
