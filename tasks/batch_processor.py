@@ -14,12 +14,13 @@ class BatchProcessor:
         self.cookies_path = cookies_path
         self.task_id = task_self.request.id
 
-    def process(self, urls, media_type, quality, bitrate, folder_id):
+    def process(self, urls, media_type, quality, bitrate, folder_id, batch_name=None):
         """Processa download em lote de múltiplas URLs"""
         start_time = time.time()
         
         try:
-            logger.info(f"[{self.task_id}] Iniciando batch download com {len(urls)} URLs")
+            batch_info = f" '{batch_name}'" if batch_name else ""
+            logger.info(f"[{self.task_id}] Iniciando batch download{batch_info} com {len(urls)} URLs")
             
             total_urls = len(urls)
             completed = 0
@@ -31,14 +32,15 @@ class BatchProcessor:
                 state='PROGRESS',
                 meta={
                     'stage': 'batch_processing',
-                    'message': f'Iniciando download de {total_urls} URLs...',
+                    'message': f'Iniciando download{batch_info} de {total_urls} URLs...',
                     'progress': 0,
                     'total_urls': total_urls,
                     'completed': 0,
                     'failed': 0,
                     'current_url': '',
                     'results': [],
-                    'type': 'batch'
+                    'type': 'batch',
+                    'batch_name': batch_name
                 }
             )
             
@@ -67,7 +69,7 @@ class BatchProcessor:
                     )
                     
                     # Processa URL individual
-                    single_result = self._process_single_video_for_batch(url, media_type, quality, bitrate, i)
+                    single_result = self._process_single_video_for_batch(url, media_type, quality, bitrate, f"{i}_{uuid.uuid4().hex[:6]}")
                     
                     if single_result:
                         completed += 1
@@ -134,14 +136,14 @@ class BatchProcessor:
             logger.error(f"[{self.task_id}] Erro no batch download: {e}")
             raise
 
-    def _process_single_video_for_batch(self, url, media_type, quality, bitrate, index):
+    def _process_single_video_for_batch(self, url, media_type, quality, bitrate, unique_suffix):
         """Processa um vídeo individual para batch download"""
         try:
             if not os.path.exists(Config.DOWNLOAD_FOLDER):
                 os.makedirs(Config.DOWNLOAD_FOLDER)
 
             # Nome único para evitar conflitos
-            unique_filename = f"batch_{self.task_id}_{index}_{uuid.uuid4().hex[:8]}"
+            unique_filename = f"batch_{self.task_id}_{unique_suffix}"
             
             # Configurações do yt-dlp
             ydl_opts = {

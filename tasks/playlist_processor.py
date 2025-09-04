@@ -152,7 +152,7 @@ class PlaylistProcessor:
         """Processa um vídeo individual da playlist"""
         try:
             # Nome único para evitar conflitos
-            unique_filename = f"playlist_{self.task_id}_{index}_{uuid.uuid4().hex[:8]}"
+            unique_filename = f"playlist_{self.task_id}_{index}_{uuid.uuid4().hex[:6]}"
             
             # Configurações do yt-dlp
             video_opts = self.base_opts.copy()
@@ -195,6 +195,8 @@ class PlaylistProcessor:
             final_path = os.path.join(Config.DOWNLOAD_FOLDER, final_filename)
             
             # Renomeia para nome final
+            # Aguarda um pouco para evitar conflitos de I/O
+            time.sleep(0.1)
             os.rename(found_file, final_path)
             
             # Salva no banco

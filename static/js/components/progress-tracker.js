@@ -20,7 +20,7 @@ class ProgressTracker {
         }
     }
 
-    startTracking(taskId, taskType = 'download', initialData = {}) {
+    startTracking(taskId, taskType = 'single', initialData = {}) {
         if (this.activeTrackers.has(taskId)) {
             return; // Already tracking this task
         }
@@ -37,39 +37,56 @@ class ProgressTracker {
         
         const card = document.createElement('div');
         card.id = `progress-${taskId}`;
-        card.className = 'glass-effect border border-blue-500 rounded-lg p-4 text-white shadow-xl';
+        card.className = 'glass-effect border border-blue-500 rounded-lg p-4 text-white shadow-xl transform transition-all duration-300';
         
         const title = taskType === 'batch' ? 'Download em Lote' : 
                      taskType === 'playlist' ? 'Download de Playlist' : 'Download';
         
+        const subtitle = initialData.batch_name ? ` - ${initialData.batch_name}` : 
+                        initialData.total_urls ? ` (${initialData.total_urls} URLs)` : '';
+        
         card.innerHTML = `
             <div class="flex items-center justify-between mb-3">
-                <h4 class="font-semibold text-cyan-300">${title}</h4>
-                <button class="close-progress text-gray-400 hover:text-white" data-task-id="${taskId}">
+                <div>
+                    <h4 class="font-semibold text-cyan-300">${title}${subtitle}</h4>
+                    <p class="text-xs text-gray-400">ID: ${taskId.substring(0, 8)}...</p>
+                </div>
+                <button class="close-progress text-gray-400 hover:text-white transition-colors p-1 rounded hover:bg-gray-600/50" data-task-id="${taskId}">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="space-y-2">
+            <div class="space-y-3">
                 <div class="text-sm text-gray-300">
                     <span class="status-message">Iniciando...</span>
                 </div>
                 <div class="w-full bg-gray-700 rounded-full h-2">
-                    <div class="progress-bar bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    <div class="progress-bar bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
                 </div>
-                <div class="text-xs text-gray-400">
+                <div class="flex justify-between text-xs text-gray-400">
                     <span class="progress-text">0%</span>
                     <span class="details-text"></span>
                 </div>
-                <div class="task-logs max-h-32 overflow-y-auto text-xs text-gray-400 bg-gray-800/50 rounded p-2 hidden">
-                    <!-- Logs will be added here -->
+                <div class="task-logs max-h-32 overflow-y-auto text-xs bg-gray-800/50 rounded p-2 border border-gray-600 hidden">
+                    <div class="text-gray-500 text-center py-2">Logs aparecerão aqui...</div>
                 </div>
-                <button class="toggle-logs text-xs text-cyan-400 hover:text-cyan-300">
-                    <i class="fas fa-chevron-down mr-1"></i>Mostrar Logs
-                </button>
+                <div class="flex justify-between items-center">
+                    <button class="toggle-logs text-xs text-cyan-400 hover:text-cyan-300 transition-colors">
+                        <i class="fas fa-chevron-down mr-1"></i>Mostrar Logs
+                    </button>
+                    <div class="flex items-center space-x-2 text-xs text-gray-500">
+                        <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span>Monitorando</span>
+                    </div>
+                </div>
             </div>
         `;
         
         container.appendChild(card);
+        
+        // Animate in
+        setTimeout(() => {
+            card.style.transform = 'translateX(0)';
+        }, 100);
         
         // Setup close button
         card.querySelector('.close-progress').addEventListener('click', () => {
@@ -79,7 +96,7 @@ class ProgressTracker {
         // Setup logs toggle
         card.querySelector('.toggle-logs').addEventListener('click', (e) => {
             const logsDiv = card.querySelector('.task-logs');
-            const button = e.target;
+            const button = e.target.closest('.toggle-logs');
             
             if (logsDiv.classList.contains('hidden')) {
                 logsDiv.classList.remove('hidden');
@@ -109,7 +126,7 @@ class ProgressTracker {
                 if (data.state === 'SUCCESS' || data.state === 'FAILURE') {
                     clearInterval(pollInterval);
                     
-                    // Auto-remove after 10 seconds if successful
+                    // Auto-remove after 15 seconds if successful
                     if (data.state === 'SUCCESS') {
                         setTimeout(() => {
                             this.stopTracking(taskId);
@@ -117,12 +134,12 @@ class ProgressTracker {
                             if (window.location.hash === '#files') {
                                 this.dashboard.fileManager.filterFiles();
                             }
-                        }, 10000);
+                        }, 15000);
                     }
                 }
             } catch (error) {
                 console.error(`Erro ao obter status da tarefa ${taskId}:`, error);
-                this.addLogToCard(taskId, `Erro de rede: ${error.message}`, 'error');
+                this.addLogToCard(taskId, `❌ Erro de rede: ${error.message}`, 'error');
             }
         }, 2000); // Poll every 2 seconds
     }
@@ -146,27 +163,50 @@ class ProgressTracker {
         
         // Update details based on task type
         if (data.stage === 'batch_processing') {
-            detailsText.textContent = ` • ${data.completed || 0}/${data.total_urls || 0} URLs`;
+            detailsText.textContent = `${data.completed || 0}/${data.total_urls || 0} URLs`;
             
             if (data.current_url) {
-                this.addLogToCard(taskId, `Processando: ${data.current_url}`, 'info');
+                this.addLogToCard(taskId, `🔗 Processando: ${data.current_url}`, 'info');
             }
         } else if (data.stage === 'downloading' && data.total_videos) {
-            detailsText.textContent = ` • ${data.completed_videos || 0}/${data.total_videos} vídeos`;
+            detailsText.textContent = `${data.completed_videos || 0}/${data.total_videos} vídeos`;
             
             if (data.current_title) {
-                this.addLogToCard(taskId, `Baixando: ${data.current_title}`, 'info');
+                this.addLogToCard(taskId, `🎵 Baixando: ${data.current_title}`, 'info');
             }
+        } else if (data.stage === 'extracting') {
+            this.addLogToCard(taskId, '🔍 Extraindo informações...', 'info');
+        } else if (data.stage === 'downloading') {
+            this.addLogToCard(taskId, '📥 Fazendo download...', 'info');
+        } else if (data.stage === 'processing') {
+            this.addLogToCard(taskId, '⚙️ Processando arquivo...', 'info');
         }
         
-        // Update card color based on state
+        // Update card color and status based on state
         if (data.state === 'SUCCESS') {
             card.className = card.className.replace('border-blue-500', 'border-green-500');
-            statusMessage.textContent = 'Concluído com sucesso!';
+            progressBar.className = progressBar.className.replace('from-blue-500 to-cyan-500', 'from-green-500 to-emerald-500');
+            statusMessage.textContent = '✅ Concluído com sucesso!';
+            
+            // Add completion log
+            this.addLogToCard(taskId, '🎉 Download concluído com sucesso!', 'success');
+            
+            // Show results if available
+            if (data.result) {
+                if (data.result.playlist) {
+                    this.addLogToCard(taskId, `📋 Playlist: ${data.result.videos?.length || 0} vídeos baixados`, 'success');
+                } else if (data.result.batch) {
+                    this.addLogToCard(taskId, `📦 Lote: ${data.result.completed}/${data.result.total_urls} sucessos`, 'success');
+                } else if (data.result.download_url) {
+                    this.addLogToCard(taskId, `📥 Arquivo disponível para download`, 'success');
+                }
+            }
+            
         } else if (data.state === 'FAILURE') {
             card.className = card.className.replace('border-blue-500', 'border-red-500');
-            statusMessage.textContent = 'Falha no processamento';
-            this.addLogToCard(taskId, data.error || 'Erro desconhecido', 'error');
+            progressBar.className = progressBar.className.replace('from-blue-500 to-cyan-500', 'from-red-500 to-red-600');
+            statusMessage.textContent = '❌ Falha no processamento';
+            this.addLogToCard(taskId, `❌ Erro: ${data.error || data.message || 'Erro desconhecido'}`, 'error');
         }
     }
 
@@ -177,21 +217,36 @@ class ProgressTracker {
         const logsDiv = card.querySelector('.task-logs');
         const timestamp = new Date().toLocaleTimeString();
         
+        // Remove placeholder if exists
+        const placeholder = logsDiv.querySelector('.text-center');
+        if (placeholder) placeholder.remove();
+        
         const logColor = type === 'error' ? 'text-red-400' : 
-                        type === 'success' ? 'text-green-400' : 'text-gray-300';
+                        type === 'success' ? 'text-green-400' : 
+                        type === 'warning' ? 'text-yellow-400' : 'text-gray-300';
         
         const logEntry = document.createElement('div');
-        logEntry.className = `${logColor} text-xs`;
-        logEntry.innerHTML = `<span class="text-gray-500">[${timestamp}]</span> ${message}`;
+        logEntry.className = `${logColor} text-xs mb-1 flex items-start space-x-2`;
+        logEntry.innerHTML = `
+            <span class="text-gray-500 flex-shrink-0">[${timestamp}]</span>
+            <span class="flex-1">${message}</span>
+        `;
         
         logsDiv.appendChild(logEntry);
         logsDiv.scrollTop = logsDiv.scrollHeight;
+        
+        // Auto-show logs if there's an error
+        if (type === 'error' && logsDiv.classList.contains('hidden')) {
+            const toggleBtn = card.querySelector('.toggle-logs');
+            toggleBtn.click();
+        }
     }
 
     stopTracking(taskId) {
         const card = this.activeTrackers.get(taskId);
         if (card) {
-            card.style.transition = 'opacity 0.3s ease';
+            card.style.transition = 'all 0.3s ease';
+            card.style.transform = 'translateX(100%)';
             card.style.opacity = '0';
             setTimeout(() => {
                 card.remove();

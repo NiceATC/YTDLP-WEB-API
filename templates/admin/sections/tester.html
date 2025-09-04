@@ -128,6 +128,10 @@
         </div>
         <div class="p-6">
             <form id="batch-download-form">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Nome do Lote</label>
+                    <input type="text" name="batch_name" required placeholder="Ex: Músicas Favoritas" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-400 mb-2">Tipo</label>
@@ -175,7 +179,7 @@
                 </div>
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-400 mb-2">URLs (uma por linha)</label>
-                    <textarea name="urls" rows="8" placeholder="https://youtube.com/watch?v=...&#10;https://youtube.com/playlist?list=...&#10;..." required class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"></textarea>
+                    <textarea name="urls" rows="6" placeholder="https://youtube.com/watch?v=...&#10;https://youtube.com/playlist?list=...&#10;..." required class="w-full bg-gray-700/50 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none"></textarea>
                     <p class="text-xs text-gray-500 mt-1">Suporta URLs individuais e playlists do YouTube</p>
                 </div>
                 <div class="flex space-x-3">

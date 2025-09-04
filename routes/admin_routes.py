@@ -312,25 +312,24 @@ def batch_download():
         if not urls:
             return jsonify({'success': False, 'error': 'Nenhuma URL fornecida'}), 400
         
-        batch = DatabaseService.create_batch_download(
-            name=batch_name,
+        # Inicia tarefa de batch download
+        from tasks import process_batch_download
+        task = process_batch_download.delay(
             urls=urls,
             media_type=media_type,
             quality=quality,
             bitrate=bitrate,
-            folder_id=int(folder_id) if folder_id else None
+            folder_id=int(folder_id) if folder_id else None,
+            batch_name=batch_name,
+            task_id=None  # Será definido automaticamente pelo Celery
         )
         
-        # Processar URLs em background (implementação básica)
-        from tasks import process_media
-        for url in urls:
-            try:
-                task = process_media.delay(url, media_type, quality, bitrate)
-                logging.info(f"Tarefa de batch iniciada: {task.id} para URL: {url}")
-            except Exception as e:
-                logging.error(f"Erro ao iniciar tarefa para URL {url}: {e}")
-        
-        return jsonify({'success': True, 'batch_id': batch.id})
+        return jsonify({
+            'success': True, 
+            'task_id': task.id,
+            'total_urls': len(urls),
+            'message': f'Download em lote "{batch_name}" iniciado com {len(urls)} URLs'
+        })
     except Exception as e:
         logging.error(f"Erro ao criar download em lote: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500

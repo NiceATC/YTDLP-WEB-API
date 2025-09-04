@@ -76,7 +76,7 @@ def process_media(self, url, media_type, quality=None, bitrate=None):
         raise
 
 @celery.task(bind=True)
-def process_batch_download(self, urls, media_type, quality=None, bitrate=None, folder_id=None):
+def process_batch_download(self, urls, media_type, quality=None, bitrate=None, folder_id=None, batch_name=None, task_id=None):
     """Processa download em lote de múltiplas URLs"""
     processor = BatchProcessor(self, ensure_cookies_available())
-    return processor.process(urls, media_type, quality, bitrate, folder_id)
+    return processor.process(urls, media_type, quality, bitrate, folder_id, batch_name)
