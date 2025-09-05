@@ -15,20 +15,22 @@ from utils.decorators import require_api_key
 
 api_bp = Blueprint('api', __name__)
 
-# Rate limiter for public endpoints
+# Rate limiter público
 public_limiter = Limiter(
-    lambda: Config.get_settings().get("PUBLIC_DOWNLOAD_LIMIT", "5 per hour"),
+    key_func=get_remote_address,
+    default_limits=[lambda: Config.get_settings().get("PUBLIC_DOWNLOAD_LIMIT", "5 per hour")],
     storage_uri=Config.REDIS_URL,
-    key_func=get_remote_address
+)
+
+# Rate limiter autenticado
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=[lambda: Config.get_settings().get("DEFAULT_RATE_LIMIT", "50 per minute")],
+    storage_uri=Config.REDIS_URL,
 )
 
 def get_rate_limit_string():
     return Config.get_settings().get("DEFAULT_RATE_LIMIT", "50 per minute")
-
-limiter = Limiter(
-    get_rate_limit_string,
-    storage_uri=Config.REDIS_URL
-)
 
 class MediaRequest(BaseModel):
     type: str
