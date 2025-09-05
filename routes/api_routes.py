@@ -15,6 +15,13 @@ from utils.decorators import require_api_key
 
 api_bp = Blueprint('api', __name__)
 
+# Rate limiter for public endpoints
+public_limiter = Limiter(
+    lambda: Config.get_settings().get("PUBLIC_DOWNLOAD_LIMIT", "5 per hour"),
+    storage_uri=Config.REDIS_URL,
+    key_func=get_remote_address
+)
+
 def get_rate_limit_string():
     return Config.get_settings().get("DEFAULT_RATE_LIMIT", "50 per minute")
 
@@ -210,3 +217,156 @@ def get_task_status(task_id):
 @api_bp.route('/download/<filename>', methods=['GET'])
 def download_file(filename):
     return send_from_directory(Config.DOWNLOAD_FOLDER, filename)
+
+@api_bp.route('/public/media', methods=['GET'])
+@public_limiter.limit(lambda: Config.get_settings().get("PUBLIC_DOWNLOAD_LIMIT", "5 per hour"))
+def public_download_media():
+    """Endpoint público para download com rate limiting por IP"""
+    try:
+        data = MediaRequest(**request.args.to_dict())
+    except ValidationError as e:
+        return jsonify({'error': 'Dados de entrada inválidos', 'details': e.errors()}), 400
+    
+    FileService.ensure_cookies_available()
+    
+    task = process_media.delay(data.url, data.type, data.quality, data.bitrate)
+    
+    # Para playlists, retorna imediatamente o link de acompanhamento
+    is_playlist = 'playlist' in data.url.lower() or 'list=' in data.url
+    if is_playlist:
+        return jsonify({
+            "status": "processing", 
+            "task_id": task.id, 
+            "check_status_url": f"{Config.BASE_URL}/api/tasks/{task.id}",
+            "type": "playlist"
+        }), 202
+    
+    timeout = Config.get_settings().get("TASK_COMPLETION_TIMEOUT", 60)
+
+    try:
+        result = task.get(timeout=timeout)
+        if task.failed():
+            raise task.info
+        
+        download_url = result.get('download_url')
+        if download_url and not download_url.startswith(('http://', 'https://')):
+            download_url = f"https://{download_url}"
+        elif download_url and download_url.startswith('http://'):
+            download_url = download_url.replace('http://', 'https://', 1)
+
+        return jsonify({
+            "status": {
+                "task": "completed",
+                "task_id": task.id,
+                "time_spend": result.get('time_spend', 'N/A'),
+                "download_url": download_url,
+            },
+            "metadata": {
+                "description": result.get('description'),
+                "duration_string": result.get('duration_string'),
+                "like_count": result.get('like_count'),
+                "thumbnail": result.get('thumbnail'),
+                "title": result.get('title'),
+                "upload_date": result.get('upload_date'),
+                "uploader": result.get('uploader'),
+                "view_count": result.get('view_count'),
+                "youtube_url": result.get('webpage_url')
+            }
+        }), 200
+        
+    except TimeoutError:
+        return jsonify({
+            "status": "processing", 
+            "task_id": task.id, 
+            "check_status_url": f"{Config.BASE_URL}/api/tasks/{task.id}"
+        }), 202
+    except Exception as e:
+        logging.error(f"A tarefa {task.id} falhou durante a execução: {e}")
+        return jsonify({"status": "failed", "task_id": task.id, "error": str(e)}), 500
+
+@api_bp.route('/supported-sites', methods=['GET'])
+def get_supported_sites():
+    """Retorna lista de sites suportados"""
+    # Lista dos principais sites suportados pelo yt-dlp
+    sites = {
+        "video_platforms": [
+            "YouTube", "Vimeo", "Dailymotion", "Twitch", "Facebook", "Instagram", 
+            "TikTok", "Twitter", "Reddit", "LinkedIn", "Pinterest", "Snapchat"
+        ],
+        "audio_platforms": [
+            "SoundCloud", "Bandcamp", "Mixcloud", "AudioMack", "YouTube Music",
+            "Spotify (Podcasts)", "Apple Podcasts", "Deezer"
+        ],
+        "streaming_platforms": [
+            "Twitch Clips", "YouTube Live", "Facebook Live", "Instagram Live",
+            "Periscope", "Livestream", "Ustream"
+        ],
+        "educational": [
+            "Khan Academy", "Coursera", "edX", "Udemy", "TED Talks",
+            "MIT OpenCourseWare", "Stanford Online"
+        ],
+        "news_media": [
+            "BBC iPlayer", "CNN", "Fox News", "NBC", "CBS", "ABC News",
+            "Reuters", "Associated Press"
+        ],
+        "international": [
+            "Bilibili", "Niconico", "VK", "Odnoklassniki", "Weibo",
+            "Youku", "Tudou", "iQiyi", "Tencent Video"
+        ],
+        "total_supported": "1000+"
+    }
+    
+    return jsonify({
+        "supported_sites": sites,
+        "note": "Esta é uma lista parcial dos sites mais populares. A API suporta mais de 1000 sites diferentes.",
+        "powered_by": "yt-dlp",
+        "last_updated": "2024-01-01"
+    })
+
+@api_bp.route('/tasks/<task_id>', methods=['GET'])
+def get_task_status_public(task_id):
+    """Endpoint público para verificar status de tarefas (sem autenticação)"""
+    task_result = AsyncResult(task_id, app=celery)
+    if task_result.state == 'PENDING': 
+        response = {'status': 'pending', 'message': 'A tarefa ainda não foi iniciada.'}
+    elif task_result.state == 'PROGRESS':
+        response = {
+            'status': 'processing',
+            'progress': task_result.info.get('progress', 0),
+            'message': task_result.info.get('message', 'Processando...'),
+            'stage': task_result.info.get('stage', 'unknown'),
+            'type': task_result.info.get('type', 'single'),
+            **task_result.info
+        }
+    elif task_result.state == 'SUCCESS': 
+        result = task_result.result
+        download_url = result.get('download_url')
+        if download_url and not download_url.startswith(('http://', 'https://')):
+            download_url = f"https://{download_url}"
+        elif download_url and download_url.startswith('http://'):
+            download_url = download_url.replace('http://', 'https://', 1)
+        
+        if result.get('playlist') or result.get('batch'):
+            response = {
+                "status": "completed",
+                "task_id": task_id,
+                "type": "playlist" if result.get('playlist') else "batch",
+                "result": result
+            }
+        else:
+            response = {
+                "status": "completed",
+                "task_id": task_id,
+                "result": {
+                    "download_url": download_url,
+                    "title": result.get('title', 'N/A'),
+                    "uploader": result.get('uploader', 'N/A'),
+                    "duration_string": result.get('duration_string', 'N/A'),
+                    "time_spend": result.get('time_spend', 'N/A')
+                }
+            }
+    elif task_result.state == 'FAILURE': 
+        response = {'status': 'failed', 'message': str(task_result.info)}
+    else: 
+        response = {'status': task_result.state}
+    return jsonify(response)

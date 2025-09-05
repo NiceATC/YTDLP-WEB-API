@@ -1,0 +1,252 @@
+/* Documentation Styles */
+body { 
+    font-family: 'Inter', sans-serif; 
+}
+
+.gradient-bg { 
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%); 
+}
+
+.glass-effect { 
+    background: rgba(31, 41, 55, 0.8); 
+    backdrop-filter: blur(10px); 
+    border: 1px solid rgba(255, 255, 255, 0.1); 
+}
+
+.floating-animation { 
+    animation: float 6s ease-in-out infinite; 
+}
+
+@keyframes float { 
+    0%, 100% { transform: translateY(0px); } 
+    50% { transform: translateY(-20px); } 
+}
+
+.nav-link { 
+    transition: all 0.3s ease; 
+}
+
+.nav-link:hover { 
+    background: rgba(6, 182, 212, 0.1); 
+    transform: translateX(4px); 
+}
+
+.nav-link.active { 
+    background: linear-gradient(135deg, var(--primary-color, #0891b2) 0%, var(--secondary-color, #0e7490) 100%); 
+    color: white; 
+}
+
+.section { 
+    display: none; 
+}
+
+.section.active { 
+    display: block; 
+    animation: fade-in 0.5s ease-in-out; 
+}
+
+@keyframes fade-in { 
+    from { opacity: 0; transform: translateY(20px); } 
+    to { opacity: 1; transform: translateY(0); } 
+}
+
+.endpoint-card { 
+    transition: all 0.3s ease; 
+}
+
+.endpoint-card:hover { 
+    transform: translateY(-4px); 
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); 
+}
+
+.feature-card {
+    background: linear-gradient(135deg, rgba(31, 41, 55, 0.6) 0%, rgba(17, 24, 39, 0.6) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.parameter-card {
+    background: rgba(31, 41, 55, 0.5);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+.endpoint-summary-card {
+    background: rgba(31, 41, 55, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.endpoint-summary-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+.site-category {
+    background: rgba(31, 41, 55, 0.5);
+    border: 1px solid rgba(107, 114, 128, 0.3);
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.error-card {
+    background: rgba(31, 41, 55, 0.5);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+.sdk-card {
+    background: rgba(31, 41, 55, 0.5);
+    border: 1px solid rgba(107, 114, 128, 0.3);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+}
+
+.code-block { 
+    background: #1a1a1a; 
+    border-radius: 0.75rem; 
+    overflow: hidden;
+    position: relative;
+}
+
+.code-block pre {
+    margin: 0;
+    padding: 1rem;
+    overflow-x: auto;
+}
+
+.method-badge { 
+    font-size: 0.75rem; 
+    font-weight: 600; 
+    padding: 0.25rem 0.75rem; 
+    border-radius: 0.5rem; 
+}
+
+.method-get { 
+    background: #10b981; 
+    color: white; 
+}
+
+.method-post { 
+    background: #3b82f6; 
+    color: white; 
+}
+
+.method-delete { 
+    background: #ef4444; 
+    color: white; 
+}
+
+.status-badge { 
+    font-size: 0.75rem; 
+    font-weight: 600; 
+    padding: 0.25rem 0.75rem; 
+    border-radius: 0.5rem; 
+}
+
+.status-200 { 
+    background: #10b981; 
+    color: white; 
+}
+
+.status-202 { 
+    background: #f59e0b; 
+    color: white; 
+}
+
+.status-400 { 
+    background: #ef4444; 
+    color: white; 
+}
+
+.status-401 { 
+    background: #dc2626; 
+    color: white; 
+}
+
+.status-429 { 
+    background: #f97316; 
+    color: white; 
+}
+
+.status-500 { 
+    background: #7c2d12; 
+    color: white; 
+}
+
+/* Copy button for code blocks */
+.code-block .copy-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(107, 114, 128, 0.8);
+    color: white;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.code-block:hover .copy-btn {
+    opacity: 1;
+}
+
+.copy-btn:hover {
+    background: rgba(107, 114, 128, 1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    .flex {
+        flex-direction: column;
+    }
+    
+    aside {
+        width: 100%;
+        margin-bottom: 2rem;
+        position: static;
+    }
+    
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(31, 41, 55, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(107, 114, 128, 0.5);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(107, 114, 128, 0.8);
+}
